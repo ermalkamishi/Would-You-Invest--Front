@@ -201,7 +201,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
   };
 
   return (
-    <div className="w-full h-full rounded-xl border border-white/10 bg-[hsl(240,10%,6%)]/80 backdrop-blur-sm overflow-hidden shadow-2xl relative group flex flex-col">
+    <div className="w-full h-full rounded-xl border border-white/10 bg-[hsl(240,10%,6%)]/80 backdrop-blur-sm overflow-y-auto no-scrollbar shadow-2xl relative group flex flex-col">
       {/* Neon top border */}
       <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#00FF66] to-transparent opacity-50" />
 
@@ -248,7 +248,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                   <span className="inline-flex items-center gap-1 font-semibold text-white/60">
                     👤 @{startup.founder?.username || 'anonymous'}
                   </span>
-                  {user && startup.founder && startup.founder.id !== user.id && (
+                  {startup.founder && (!user || startup.founder.id !== user.id) && (
                     <button
                       type="button"
                       onClick={handleFollowToggle}
