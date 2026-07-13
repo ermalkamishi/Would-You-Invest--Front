@@ -27,3 +27,9 @@ export async function fetchUserPortfolio(userId) {
   if (!res.ok) throw new Error('Failed to fetch user portfolio');
   return res.json();
 }
+
+export async function fetchAllInvestments() {
+  const res = await fetch(`${API_BASE}/investments`);
+  if (!res.ok) throw new Error('Failed to fetch all investments');
+  return res.json();
+}
