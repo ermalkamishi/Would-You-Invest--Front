@@ -20,7 +20,8 @@ function getDaysRemaining(lastChangedAt) {
 export default function ProfileHeader({ user }) {
   const dispatch = useDispatch();
   const token = useSelector((s) => s.auth.token);
-  const avatarLastChangedAt = user?.avatarLastChangedAt || useSelector((s) => s.auth.avatarLastChangedAt);
+  const authAvatarLastChangedAt = useSelector((s) => s.auth.avatarLastChangedAt);
+  const avatarLastChangedAt = user?.avatarLastChangedAt || authAvatarLastChangedAt;
   const fileInputRef = useRef(null);
 
   const isFounder = user?.role === 'founder';

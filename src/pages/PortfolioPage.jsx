@@ -14,6 +14,37 @@ export default function PortfolioPage() {
   const { isAuthenticated, user } = useSelector((s) => s.auth);
   const isFounder = user?.role === 'founder';
 
+  const [topTenIds, setTopTenIds] = useState([]);
+  const [activeTab, setActiveTab] = useState('holdings'); // 'holdings' | 'bets'
+  const [bets, setBets] = useState([]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isFounder) return;
+    if (user?.id) {
+      // Sync portfolio from DB
+      fetchUserPortfolio(user.id)
+        .then((port) => dispatch(setPortfolio(port)))
+        .catch(console.error);
+    }
+
+    // Fetch top 10 pitches for Conviction Bonus
+    fetchPitches('hot')
+      .then((data) => {
+        const top10 = data.slice(0, 10).map((p) => p.id);
+        setTopTenIds(top10);
+      })
+      .catch(console.error);
+  }, [user?.id, dispatch, isAuthenticated, isFounder]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isFounder) return;
+    if (activeTab === 'bets' && user?.id) {
+      fetchUserBets(user.id)
+        .then((data) => setBets(data))
+        .catch(console.error);
+    }
+  }, [activeTab, user?.id, isAuthenticated, isFounder]);
+
   if (!isAuthenticated) {
     return (
       <div className="max-w-lg mx-auto w-full px-4 py-6 flex flex-col items-center justify-center py-20 text-center">
@@ -48,36 +79,6 @@ export default function PortfolioPage() {
       </div>
     );
   }
-
-  const [topTenIds, setTopTenIds] = useState([]);
-
-  useEffect(() => {
-    if (user?.id) {
-      // Sync portfolio from DB
-      fetchUserPortfolio(user.id)
-        .then((port) => dispatch(setPortfolio(port)))
-        .catch(console.error);
-    }
-
-    // Fetch top 10 pitches for Conviction Bonus
-    fetchPitches('hot')
-      .then((data) => {
-        const top10 = data.slice(0, 10).map((p) => p.id);
-        setTopTenIds(top10);
-      })
-      .catch(console.error);
-  }, [user?.id, dispatch]);
-
-  const [activeTab, setActiveTab] = useState('holdings'); // 'holdings' | 'bets'
-  const [bets, setBets] = useState([]);
-
-  useEffect(() => {
-    if (activeTab === 'bets' && user?.id) {
-      fetchUserBets(user.id)
-        .then((data) => setBets(data))
-        .catch(console.error);
-    }
-  }, [activeTab, user?.id]);
 
   const portfolio = user?.portfolio || [];
 

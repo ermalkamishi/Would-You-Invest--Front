@@ -8,7 +8,6 @@ import LoginModal from '../features/auth/components/LoginModal';
 import WelcomeBonusModal from '../features/auth/components/WelcomeBonusModal';
 import LiveAlertSystem from '../components/layout/LiveAlertSystem';
 import { openLoginModal, closeLoginModal } from '../features/auth/authSlice';
-import AiAdvisor from '../components/layout/AiAdvisor';
 
 export default function AppLayout() {
   const dispatch = useDispatch();
@@ -39,7 +38,6 @@ export default function AppLayout() {
 
       <LoginModal isOpen={showLoginModal} onClose={() => dispatch(closeLoginModal())} />
       <WelcomeBonusModal />
-      <AiAdvisor />
     </div>
   );
 }
