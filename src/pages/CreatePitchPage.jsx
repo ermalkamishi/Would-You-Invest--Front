@@ -99,7 +99,7 @@ export default function CreatePitchPage() {
       case 2: 
         return form.solution.trim().length >= 40 && form.whyNow.trim().length >= 10;
       case 3: 
-        return form.whoPays.trim().length >= 10 && form.ask.trim().length >= 10;
+        return form.whoPays.trim().length >= 3 && form.ask.trim().length >= 3;
       case 4: 
         return (form.demoClipUrl.trim() === '' || isValidUrl(form.demoClipUrl)) && 
                (form.tractionSnapshot.trim() === '' || form.tractionSnapshot.trim().length >= 3) && 
@@ -336,8 +336,8 @@ export default function CreatePitchPage() {
                   placeholder="e.g., Enterprise legal teams"
                 />
                 <div className="flex justify-between items-center mt-1">
-                  <span className={`text-[10px] ${form.whoPays.length > 0 && form.whoPays.length < 10 ? 'text-[#FF3366]' : 'text-white/20'}`}>
-                    {form.whoPays.length > 0 && form.whoPays.length < 10 ? 'Min 10 characters required' : 'Minimum 10 characters'}
+                  <span className={`text-[10px] ${form.whoPays.length > 0 && form.whoPays.length < 3 ? 'text-[#FF3366]' : 'text-white/20'}`}>
+                    {form.whoPays.length > 0 && form.whoPays.length < 3 ? 'Min 3 characters required' : 'Minimum 3 characters'}
                   </span>
                   <span className="text-[10px] text-white/20 text-right">{form.whoPays.length} chars</span>
                 </div>
@@ -357,8 +357,8 @@ export default function CreatePitchPage() {
                   placeholder="e.g., Beta testers, cofounder, $150k pre-seed"
                 />
                 <div className="flex justify-between items-center mt-1">
-                  <span className={`text-[10px] ${form.ask.length > 0 && form.ask.length < 10 ? 'text-[#FF3366]' : 'text-white/20'}`}>
-                    {form.ask.length > 0 && form.ask.length < 10 ? 'Min 10 characters required' : 'Minimum 10 characters'}
+                  <span className={`text-[10px] ${form.ask.length > 0 && form.ask.length < 3 ? 'text-[#FF3366]' : 'text-white/20'}`}>
+                    {form.ask.length > 0 && form.ask.length < 3 ? 'Min 3 characters required' : 'Minimum 3 characters'}
                   </span>
                   <span className="text-[10px] text-white/20 text-right">{form.ask.length} chars</span>
                 </div>
