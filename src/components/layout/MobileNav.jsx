@@ -9,6 +9,8 @@ export default function MobileNav() {
 
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (item.authRequired && !isAuthenticated) return false;
+    if (item.adminOnly && user?.role !== 'admin') return false;
+    if (item.adminOnly && user?.role === 'admin') return true;
     if (item.founderOnly && !isFounder) return false;
     if (item.investorOnly && isFounder) return false;
     return true;
