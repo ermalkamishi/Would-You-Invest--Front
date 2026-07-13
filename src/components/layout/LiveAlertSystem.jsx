@@ -3,106 +3,68 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setHighlightPitchId } from '../../features/pitches/pitchesSlice';
 
-// ── RSS NEWS FETCHER ─────────────────────────────────────────────────────────
-// Uses rss2json.com as a free CORS-friendly proxy to fetch real news from TechCrunch
-const NEWS_FEEDS = [
-  'https://techcrunch.com/feed/',
-  'https://venturebeat.com/feed/',
-];
+// ── GENERATE REAL ALERTS FROM PITCHES ─────────────────────────────────────────
+function generateRealAlerts(pitches) {
+  const alerts = [];
+  if (!pitches || pitches.length === 0) return alerts;
 
-const CATEGORY_KEYWORDS = {
-  'AI':       ['ai', 'artificial intelligence', 'llm', 'openai', 'model', 'machine learning', 'gpt', 'gemini', 'claude', 'automation', 'agent'],
-  'Climate':  ['climate', 'ev', 'electric vehicle', 'clean energy', 'carbon', 'solar', 'green', 'sustainability', 'charging'],
-  'Fintech':  ['fintech', 'payment', 'banking', 'crypto', 'blockchain', 'startup funding', 'neobank', 'lending', 'insurance'],
-  'Consumer': ['consumer', 'retail', 'marketplace', 'e-commerce', 'subscription', 'd2c', 'direct-to-consumer'],
-  'Health':   ['health', 'mental health', 'biotech', 'medtech', 'pharma', 'hospital', 'wellness', 'therapy'],
-  'EdTech':   ['edtech', 'education', 'learning', 'university', 'skills', 'training', 'school'],
-  'B2B SaaS': ['saas', 'enterprise', 'b2b', 'software', 'productivity', 'workflow', 'crm', 'erp', 'cloud'],
-};
+  pitches.forEach((pitch) => {
+    // 1. Pitch creation event
+    const founderName = pitch.founder?.username || 'A founder';
+    const pitchTitle = pitch.problem.length > 40 ? pitch.problem.slice(0, 40) + '…' : pitch.problem;
+    
+    alerts.push({
+      id: `pitch-${pitch.id}`,
+      type: 'NEW_PITCH',
+      emoji: '🚀',
+      color: '#00FF66',
+      pitchId: pitch.id,
+      msg: `${founderName} launched a new pitch: "${pitchTitle}" in ${pitch.category}!`,
+    });
 
-function getNewsEmoji(category) {
-  const map = { AI: '🤖', Climate: '🌱', Fintech: '💰', Consumer: '🛒', Health: '🏥', EdTech: '📚', 'B2B SaaS': '⚙️' };
-  return map[category] || '📰';
-}
-
-function scoreArticleForCategory(title, category) {
-  const keywords = CATEGORY_KEYWORDS[category] || [];
-  const t = (title || '').toLowerCase();
-  return keywords.filter((kw) => t.includes(kw)).length;
-}
-
-async function fetchNews() {
-  const results = [];
-  for (const feed of NEWS_FEEDS) {
-    try {
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed)}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data.status === 'ok' && Array.isArray(data.items)) {
-        results.push(...data.items.map((item) => ({
-          title: item.title,
-          link: item.link,
-          pubDate: item.pubDate,
-        })));
-      }
-    } catch {
-      // silently ignore any individual feed failures
+    // 2. Funding/Raised event
+    const raised = Number(pitch.totalRaised || 0);
+    if (raised > 0) {
+      alerts.push({
+        id: `raised-${pitch.id}`,
+        type: 'FUNDING',
+        emoji: '💰',
+        color: '#FF9900',
+        pitchId: pitch.id,
+        msg: `"${pitchTitle}" has raised $${raised.toLocaleString()} from ${pitch.investorCount || 0} investor(s)!`,
+      });
+      
+      // 3. Price change event
+      const price = Number(pitch.currentPrice || 0);
+      alerts.push({
+        id: `price-${pitch.id}`,
+        type: 'PRICE_UPDATE',
+        emoji: '📈',
+        color: '#00BFFF',
+        pitchId: pitch.id,
+        msg: `"${pitchTitle}" share price is up to $${price.toFixed(4)}!`,
+      });
     }
-  }
-  return results;
-}
 
-function matchArticleToPitch(articles, pitches) {
-  if (!articles.length || !pitches.length) return null;
-
-  let bestScore = 0;
-  let bestArticle = null;
-  let bestPitch = null;
-
-  // Shuffle for variety
-  const shuffledArticles = [...articles].sort(() => Math.random() - 0.5).slice(0, 8);
-
-  for (const article of shuffledArticles) {
-    for (const pitch of pitches) {
-      const score = scoreArticleForCategory(article.title, pitch.category);
-      if (score > bestScore) {
-        bestScore = score;
-        bestArticle = article;
-        bestPitch = pitch;
-      }
+    // 4. Comment events
+    if (pitch.comments && pitch.comments.length > 0) {
+      pitch.comments.forEach((c, idx) => {
+        const commentAuthor = c.user?.username || 'An investor';
+        const commentText = c.text.length > 40 ? c.text.slice(0, 40) + '…' : c.text;
+        alerts.push({
+          id: `comment-${pitch.id}-${idx}`,
+          type: 'COMMENT',
+          emoji: '💬',
+          color: '#FF3366',
+          pitchId: pitch.id,
+          msg: `${commentAuthor} commented: "${commentText}" on "${pitchTitle}"`,
+        });
+      });
     }
-  }
+  });
 
-  if (!bestPitch || bestScore === 0) {
-    // If nothing matched, pick a random article + random pitch
-    bestArticle = shuffledArticles[0];
-    bestPitch = pitches[Math.floor(Math.random() * pitches.length)];
-  }
-
-  const emoji = getNewsEmoji(bestPitch.category);
-  const shortTitle = bestArticle.title.length > 65
-    ? bestArticle.title.slice(0, 65) + '…'
-    : bestArticle.title;
-
-  return {
-    type: 'REAL_NEWS',
-    emoji,
-    color: '#00BFFF',
-    pitchId: bestPitch.id,
-    articleUrl: bestArticle.link,
-    msg: `${emoji} Real news: "${shortTitle}" — relevant to "${bestPitch.problem.slice(0, 40)}…"`,
-  };
+  return alerts;
 }
-
-// ── FALLBACK alerts (used only when news fails to load) ──────────────────────
-const FALLBACK_ALERTS = [
-  { emoji: '🔥', color: '#FF9900', msg: 'TechCrunch: AI sector funding hits record high this quarter' },
-  { emoji: '🌱', color: '#00FF66', msg: 'Bloomberg: EV adoption up 45% YoY — climate startups in high demand' },
-  { emoji: '💰', color: '#00BFFF', msg: 'Forbes: Fintech startup exits surge — best time to back early ideas' },
-  { emoji: '🤖', color: '#FF3366', msg: 'WSJ: LLM costs down 90% in 18 months — AI startups more viable than ever' },
-  { emoji: '📈', color: '#FF9900', msg: 'Reuters: Seed-stage valuations up 30% — early investors are winning' },
-];
 
 // ── FLOATING TOAST ────────────────────────────────────────────────────────────
 function LiveToast({ alert, onDismiss, onClick }) {
@@ -127,23 +89,17 @@ function LiveToast({ alert, onDismiss, onClick }) {
         borderColor: `${alert.color}40`,
         cursor: isClickable ? 'pointer' : 'default',
       }}
-      className={`pointer-events-auto w-80 rounded-xl border bg-[hsl(240,12%,7%)] backdrop-blur-sm shadow-2xl px-4 py-3 flex items-start gap-3 ${
+      className={`pointer-events-auto w-80 rounded-xl border bg-[hsl(240,12%,7%)] backdrop-blur-sm shadow-2xl px-4 py-3 flex items-start gap-3 relative ${
         isClickable ? 'hover:bg-[hsl(240,12%,10%)] transition-colors group' : ''
       }`}
     >
       <span className="text-xl shrink-0 mt-0.5">{alert.emoji}</span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-6">
         <p className={`text-xs font-semibold leading-relaxed text-white/90 ${isClickable ? 'group-hover:text-white' : ''}`}>
           {alert.msg}
         </p>
-        {alert.type === 'REAL_NEWS' && (
-          <span className="inline-flex items-center gap-1 mt-1 text-[9px] font-mono text-[#00BFFF]/60 uppercase tracking-wider">
-            <span className="w-1 h-1 rounded-full bg-[#00BFFF] inline-block animate-pulse" />
-            Live news · Tap to view pitch
-          </span>
-        )}
-        {isClickable && alert.type !== 'REAL_NEWS' && (
-          <p className="text-[9px] text-white/30 mt-0.5 group-hover:text-white/50 transition-colors">
+        {isClickable && (
+          <p className="text-[9px] text-[#00FF66]/60 mt-1 font-mono uppercase tracking-wider group-hover:text-[#00FF66] transition-colors">
             Tap to view pitch →
           </p>
         )}
@@ -157,6 +113,20 @@ function LiveToast({ alert, onDismiss, onClick }) {
           />
         </div>
       </div>
+
+      {/* Dismiss Button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss();
+        }}
+        className="absolute top-2.5 right-2.5 p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"
+        aria-label="Dismiss alert"
+      >
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -185,48 +155,53 @@ export default function LiveAlertSystem() {
   const navigate = useNavigate();
   const pitches = useSelector((s) => s.pitches.feed);
 
-  const [newsArticles, setNewsArticles] = useState([]);
-  const [tickerAlerts, setTickerAlerts] = useState(() =>
-    FALLBACK_ALERTS.slice(0, 5)
-  );
+  const [tickerAlerts, setTickerAlerts] = useState([]);
   const [toasts, setToasts] = useState([]);
   const intervalRef = useRef(null);
 
-  // Load real news once on mount
+  // Sync tickerAlerts based on pitches changes
   useEffect(() => {
-    fetchNews().then((articles) => {
-      if (articles.length > 0) {
-        setNewsArticles(articles);
-        // Pre-populate ticker with real headlines
-        const initialAlerts = articles.slice(0, 5).map((article) => ({
-          emoji: '📰',
-          color: '#00BFFF',
-          msg: article.title.length > 80 ? article.title.slice(0, 80) + '…' : article.title,
-        }));
-        setTickerAlerts(initialAlerts);
+    if (pitches && pitches.length > 0) {
+      const realAlerts = generateRealAlerts(pitches);
+      let displayAlerts = [...realAlerts];
+      // Repeat alerts to fill the ticker nicely if there are few
+      while (displayAlerts.length < 5 && displayAlerts.length > 0) {
+        displayAlerts = [...displayAlerts, ...realAlerts];
       }
-    });
-  }, []);
-
-  const generateNextAlert = useCallback(() => {
-    if (newsArticles.length > 0 && pitches.length > 0) {
-      return matchArticleToPitch(newsArticles, pitches);
+      setTickerAlerts(displayAlerts);
+    } else {
+      setTickerAlerts([]);
     }
-    // Fall back to a random static fallback
-    return FALLBACK_ALERTS[Math.floor(Math.random() * FALLBACK_ALERTS.length)];
-  }, [newsArticles, pitches]);
+  }, [pitches]);
 
+  // Generate periodic toasts of real activity
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      const alert = generateNextAlert();
-      if (!alert) return;
-      setTickerAlerts((prev) => [...prev.slice(-9), alert]);
-      const id = Date.now();
-      setToasts((prev) => [...prev, { id, alert }]);
-    }, 20000); // Every 20 seconds
+    if (!pitches || pitches.length === 0) return;
 
-    return () => clearInterval(intervalRef.current);
-  }, [generateNextAlert]);
+    // Trigger first toast faster on mount/load if there is any activity
+    const timeoutOnMount = setTimeout(() => {
+      const realAlerts = generateRealAlerts(pitches);
+      if (realAlerts.length > 0) {
+        const randomAlert = realAlerts[Math.floor(Math.random() * realAlerts.length)];
+        const id = Date.now();
+        setToasts((prev) => [...prev, { id, alert: randomAlert }]);
+      }
+    }, 5000);
+
+    intervalRef.current = setInterval(() => {
+      const realAlerts = generateRealAlerts(pitches);
+      if (realAlerts.length === 0) return;
+
+      const randomAlert = realAlerts[Math.floor(Math.random() * realAlerts.length)];
+      const id = Date.now();
+      setToasts((prev) => [...prev, { id, alert: randomAlert }]);
+    }, 25000); // Trigger toast notification every 25 seconds
+
+    return () => {
+      clearTimeout(timeoutOnMount);
+      clearInterval(intervalRef.current);
+    };
+  }, [pitches]);
 
   const dismissToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -238,6 +213,10 @@ export default function LiveAlertSystem() {
     dismissToast(id);
     navigate('/');
   };
+
+  if (!pitches || pitches.length === 0) {
+    return null;
+  }
 
   return (
     <>
