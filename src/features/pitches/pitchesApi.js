@@ -102,3 +102,13 @@ export async function upvoteCommentApi(commentId, token) {
   return res.json();
 }
 
+/**
+ * Fetch investment history for a pitch/startup.
+ */
+export async function fetchInvestmentHistory(startupId) {
+  const res = await fetch(`${API_BASE}/investments/startup/${startupId}`);
+  if (!res.ok) throw new Error('Failed to fetch investment history');
+  return res.json();
+}
+
+

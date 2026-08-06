@@ -1,18 +1,89 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Sparkles, Users, TrendingUp, MessageSquare, Flag, Send, X, ThumbsUp, Share2 } from 'lucide-react';
+import { Sparkles, Users, TrendingUp, MessageSquare, Flag, Send, X, ThumbsUp, Share2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { useTickerPrice } from '../../../hooks/useTickerPrice';
 import { addComment, upvoteComment, patchPitchStats } from '../pitchesSlice';
-import { addCommentToPitch, upvoteCommentApi } from '../pitchesApi';
+import { addCommentToPitch, upvoteCommentApi, fetchInvestmentHistory } from '../pitchesApi';
 import { updateProfileSuccess, openLoginModal } from '../../auth/authSlice';
 import LearnMoreModal from './LearnMoreModal';
 import { API_BASE } from '../../../config';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+
+const isRealPitch = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+const generateMockHistory = (startup) => {
+  let hash = 0;
+  const id = startup.id || '1';
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const points = [];
+  const count = 5;
+  const baseRaised = Number(startup.totalRaised) || 0;
+  
+  // Starting point
+  points.push({
+    id: 'start',
+    amountInvested: 0,
+    entryPrice: 0.0100,
+    sharesBought: 0,
+    timestamp: new Date(Date.now() - 3600 * 24 * 7 * 1000).toISOString(),
+    cumulativeRaised: 0,
+    cumulativePrice: 0.0100,
+  });
+  
+  for (let i = 1; i <= count; i++) {
+    const fraction = i / count;
+    const raisedAtStep = baseRaised * fraction;
+    const computedPrice = parseFloat((0.0015 * Math.sqrt(raisedAtStep)).toFixed(4));
+    const priceAtStep = Math.max(0.01, computedPrice);
+    points.push({
+      id: `mock-${i}`,
+      amountInvested: baseRaised / count,
+      entryPrice: priceAtStep,
+      sharesBought: (baseRaised / count) / priceAtStep,
+      timestamp: new Date(Date.now() - 3600 * 24 * (7 - i * 1.4) * 1000).toISOString(),
+      cumulativeRaised: parseFloat(raisedAtStep.toFixed(2)),
+      cumulativePrice: priceAtStep,
+    });
+  }
+  return points;
+};
 
 export default function PitchCard({ startup, isActive, onInvest, onPass }) {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
   const token = useSelector((s) => s.auth.token);
+
+  const [history, setHistory] = useState([]);
+  const [chartLoading, setChartLoading] = useState(false);
+  const [chartMetric, setChartMetric] = useState('price'); // 'price' | 'raised'
+
+  useEffect(() => {
+    let active = true;
+    if (isActive && startup.id) {
+      if (isRealPitch(startup.id)) {
+        setChartLoading(true);
+        fetchInvestmentHistory(startup.id)
+          .then((data) => {
+            if (active) {
+              setHistory(data);
+            }
+          })
+          .catch((err) => console.error('Error fetching investment history:', err))
+          .finally(() => {
+            if (active) setChartLoading(false);
+          });
+      } else {
+        setHistory(generateMockHistory(startup));
+      }
+    }
+    return () => {
+      active = false;
+    };
+  }, [isActive, startup.id, startup.totalRaised]);
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -200,6 +271,49 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
     }
   };
 
+  const chartData = [];
+  
+  // Starting launch point
+  chartData.push({
+    name: 'Launch',
+    raised: 0,
+    price: 0.0100,
+    date: new Date(startup.createdAt || Date.now() - 7 * 24 * 3600 * 1000).toLocaleDateString(),
+  });
+
+  let runningRaised = 0;
+  history.forEach((inv, index) => {
+    if (inv.cumulativeRaised !== undefined) {
+      if (inv.cumulativeRaised > 0) {
+        chartData.push({
+          name: `#${index}`,
+          raised: inv.cumulativeRaised,
+          price: inv.cumulativePrice,
+          date: new Date(inv.timestamp).toLocaleDateString(),
+        });
+      }
+    } else {
+      runningRaised += Number(inv.amountInvested);
+      chartData.push({
+        name: `#${index + 1}`,
+        raised: parseFloat(runningRaised.toFixed(2)),
+        price: Number(inv.entryPrice),
+        date: new Date(inv.timestamp).toLocaleDateString(),
+      });
+    }
+  });
+
+  // Ensure current state is included
+  const lastEntry = chartData[chartData.length - 1];
+  if (!lastEntry || lastEntry.raised < Number(startup.totalRaised)) {
+    chartData.push({
+      name: 'Current',
+      raised: Number(startup.totalRaised),
+      price: Number(startup.currentPrice),
+      date: 'Now',
+    });
+  }
+
   return (
     <div className="w-full h-full rounded-xl border border-white/10 bg-[hsl(240,10%,6%)]/80 backdrop-blur-sm overflow-y-auto no-scrollbar shadow-2xl relative group flex flex-col">
       {/* Neon top border */}
@@ -214,30 +328,9 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
           </div>
         )}
 
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between">
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 mb-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#00FF66]/15 text-[#00FF66] border border-[#00FF66]/30">
-                <Sparkles className="w-3 h-3" /> {startup.category}
-              </span>
-              {Number(startup.investorCount) >= 3 && (
-                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#00BFFF]/15 text-[#00BFFF] border border-[#00BFFF]/30">
-                  💎 Smart Money
-                </span>
-              )}
-              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/5 text-white/40 border border-white/10" title="Founder response rate">
-                ⚡ {responseRate}% response
-              </span>
-              <button
-                onClick={handleFlag}
-                className="text-white/20 hover:text-[#FF3366] transition-colors p-1 rounded-full hover:bg-[#FF3366]/10 ml-auto"
-                title="Report Pitch"
-              >
-                <Flag className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Founder details & badges */}
+            {/* Founder details & follow badge */}
             <div className="flex flex-wrap items-center gap-2 mt-1 mb-2 text-[10px] text-white/40">
               {startup.founder?.isStealth ? (
                 <span className="inline-flex items-center gap-1 italic text-white/30">
@@ -272,28 +365,23 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                       🏆 Verified Builder
                     </span>
                   )}
-                  {startup.founder?.badges?.includes('First-time Founder') && (
-                    <span className="px-1 py-0.2 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-[8px] font-bold">
-                      🌱 First-Time Founder
-                    </span>
-                  )}
                 </>
               )}
             </div>
 
-            <h3 className="text-lg font-bold leading-tight text-white">{startup.problem}</h3>
-            <p className="text-sm text-white/50 mt-1">{startup.solution}</p>
+            <h3 className="text-lg font-bold leading-tight text-white mb-2">{startup.problem}</h3>
           </div>
-          <div className="flex items-center gap-2 text-right ml-3 shrink-0">
-            {/* Sparkline chart */}
-            <svg className="w-16 h-8 text-[#00FF66] opacity-60" viewBox="0 0 60 20">
-              <polyline
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                points={generateSparklinePoints(startup.id, tickerPrice)}
-              />
-            </svg>
+
+          <div className="flex flex-col items-end gap-1 text-right ml-3 shrink-0">
+            <div className="flex items-center gap-2 mb-1">
+              <button
+                onClick={handleFlag}
+                className="text-white/20 hover:text-[#FF3366] transition-colors p-1 rounded-full hover:bg-[#FF3366]/10"
+                title="Report Pitch"
+              >
+                <Flag className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <div>
               <span className={`font-mono text-lg font-bold block leading-none ${tickerColorClass}`}>
                 ${tickerPrice.toFixed(4)}
@@ -302,41 +390,96 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
             </div>
           </div>
         </div>
-
-        {/* Pre-product label */}
-        <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-white/5 border border-white/10 text-white/40 mb-3">
-          pre-product / idea stage
-        </span>
       </div>
 
-      {/* Video area — hidden when comments are open */}
+      {/* Metric Selector & Traction Chart Header */}
       {!showComments && (
-        <div className="relative mx-5 flex-1 min-h-[150px] rounded-lg bg-black/60 border border-white/5 overflow-hidden flex items-center justify-center mb-4">
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#00FF66]/5 to-transparent" />
-          {startup.demoClipUrl ? (
-            youtubeEmbedUrl ? (
-              <iframe
-                src={youtubeEmbedUrl}
-                className="w-full h-full border-none"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title="Pitch Video"
-              />
-            ) : baseYoutubeUrl ? (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center text-[#00FF66]/50 mb-2.5 mx-auto">
-                  <TrendingUp className="w-5 h-5 rotate-90" />
-                </div>
-                <p className="text-white/30 text-xs font-semibold">Video Pitch Paused</p>
-                <p className="text-white/15 text-[10px] mt-0.5">Scroll to active card to watch</p>
-              </div>
-            ) : (
-              <video ref={videoRef} src={startup.demoClipUrl} className="w-full h-full object-cover" controls loop />
-            )
+        <div className="flex justify-between items-center px-5 mb-2">
+          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Traction Chart</h4>
+          <div className="flex bg-white/5 rounded-md p-0.5 border border-white/10">
+            <button
+              onClick={() => setChartMetric('price')}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${
+                chartMetric === 'price'
+                  ? 'bg-[#00FF66] text-black'
+                  : 'text-white/50 hover:text-white'
+              }`}
+            >
+              Price
+            </button>
+            <button
+              onClick={() => setChartMetric('raised')}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${
+                chartMetric === 'raised'
+                  ? 'bg-[#00FF66] text-black'
+                  : 'text-white/50 hover:text-white'
+              }`}
+            >
+              Raised
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Chart area — hidden when comments are open */}
+      {!showComments && (
+        <div className="relative mx-5 flex-1 min-h-[260px] rounded-lg bg-black/60 border border-white/5 p-3 flex flex-col justify-center mb-4 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#00FF66]/5 to-transparent pointer-events-none" />
+          {chartLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 text-[#00FF66] animate-spin" />
+            </div>
           ) : (
-            <div className="text-center">
-              <p className="text-white/30 text-sm">60s Video Pitch</p>
-              <p className="text-white/15 text-xs mt-1">No video uploaded yet</p>
+            <div className="w-full h-full min-h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: -5 }}>
+                  <defs>
+                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00FF66" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#00FF66" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="name"
+                    stroke="rgba(255,255,255,0.2)"
+                    fontSize={9}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="rgba(255,255,255,0.2)"
+                    fontSize={9}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => chartMetric === 'price' ? `$${v.toFixed(3)}` : `$${v}`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(10, 10, 12, 0.95)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      color: '#fff',
+                    }}
+                    formatter={(value) => [
+                      chartMetric === 'price' ? `$${Number(value).toFixed(4)}` : formatCurrency(value),
+                      chartMetric === 'price' ? 'Price/Share' : 'Total Raised'
+                    ]}
+                    labelFormatter={(label, items) => {
+                      const dataPoint = items[0]?.payload;
+                      return dataPoint ? `Date: ${dataPoint.date}` : label;
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey={chartMetric}
+                    stroke="#00FF66"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#chartGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </div>
@@ -488,12 +631,6 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
         </button>
       </div>
 
-      {/* Legal disclaimer strip */}
-      <div className="mx-5 mb-4 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/5 flex items-center gap-2">
-        <span className="text-[8px] text-white/20 leading-snug">
-          ⚠️ <strong className="text-white/30">Not real investment advice.</strong> CapTab uses virtual currency only. No securities are offered or sold. Idea stage — pre-product.
-        </span>
-      </div>
       {/* Modal for detailed breakdown */}
       <LearnMoreModal
         isOpen={isLearnMoreOpen}

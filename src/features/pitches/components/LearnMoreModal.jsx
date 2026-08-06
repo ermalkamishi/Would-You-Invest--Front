@@ -7,6 +7,16 @@ import { addCommentToPitch } from '../pitchesApi';
 
 const isRealPitch = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
+const getYoutubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}`;
+  }
+  return null;
+};
+
 import { fetchUserBets, placeBet } from '../betsApi';
 import { deductFromWallet } from '../../wallet/walletSlice';
 
@@ -211,6 +221,26 @@ export default function LearnMoreModal({ isOpen, onClose, startup, tickerPrice, 
             <h4 className="text-xs font-bold text-[#00FF66] uppercase tracking-wider mb-1">Proposed Solution</h4>
             <p className="text-base text-white/90 leading-relaxed font-medium">{startup.solution}</p>
           </div>
+
+          {/* Video Pitch Player */}
+          {startup.demoClipUrl && (
+            <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] space-y-2">
+              <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider">60s Video Pitch</h4>
+              <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/60 border border-white/5">
+                {getYoutubeEmbedUrl(startup.demoClipUrl) ? (
+                  <iframe
+                    src={`${getYoutubeEmbedUrl(startup.demoClipUrl)}?autoplay=0&mute=0`}
+                    className="w-full h-full border-none"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Pitch Video"
+                  />
+                ) : (
+                  <video src={startup.demoClipUrl} className="w-full h-full object-cover" controls />
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Core Analytics Grid */}
           <div className="grid grid-cols-2 gap-4">
