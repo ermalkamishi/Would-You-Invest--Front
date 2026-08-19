@@ -18,11 +18,11 @@ const generateMockHistory = (startup) => {
   for (let i = 0; i < id.length; i++) {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   const points = [];
   const count = 5;
   const baseRaised = Number(startup.totalRaised) || 0;
-  
+
   // Starting point
   points.push({
     id: 'start',
@@ -33,7 +33,7 @@ const generateMockHistory = (startup) => {
     cumulativeRaised: 0,
     cumulativePrice: 0.0100,
   });
-  
+
   for (let i = 1; i <= count; i++) {
     const fraction = i / count;
     const raisedAtStep = baseRaised * fraction;
@@ -134,7 +134,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
 
   const comments = startup.comments || [];
   const { price: tickerPrice, direction: priceDirection } = useTickerPrice(Number(startup.currentPrice));
-  
+
   let tickerColorClass = '';
   if (priceDirection === 'up') {
     tickerColorClass = 'animate-flash-green text-[#00FF66]';
@@ -173,11 +173,11 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
       points.push(val);
     }
     points[6] = basePrice;
-    
+
     const min = Math.min(...points);
     const max = Math.max(...points);
     const range = max - min || 1;
-    
+
     return points.map((p, idx) => {
       const x = idx * 10;
       const y = 18 - ((p - min) / range) * 16; // Bounds: y in [2, 18]
@@ -272,7 +272,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
   };
 
   const chartData = [];
-  
+
   // Starting launch point
   chartData.push({
     name: 'Launch',
@@ -346,11 +346,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                       type="button"
                       onClick={handleFollowToggle}
                       disabled={followLoading}
-                      className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all border ${
-                        isFollowing
-                          ? 'bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]'
-                          : 'bg-white/5 border-white/10 text-white/40 hover:bg-[#00FF66]/10 hover:border-[#00FF66]/30 hover:text-[#00FF66]'
-                      }`}
+                      className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all border ${isFollowing
+                        ? 'bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]'
+                        : 'bg-white/5 border-white/10 text-white/40 hover:bg-[#00FF66]/10 hover:border-[#00FF66]/30 hover:text-[#00FF66]'
+                        }`}
                     >
                       {isFollowing ? 'Following' : 'Follow'}
                     </button>
@@ -399,21 +398,19 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
           <div className="flex bg-white/5 rounded-md p-0.5 border border-white/10">
             <button
               onClick={() => setChartMetric('price')}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${
-                chartMetric === 'price'
-                  ? 'bg-[#00FF66] text-black'
-                  : 'text-white/50 hover:text-white'
-              }`}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${chartMetric === 'price'
+                ? 'bg-[#00FF66] text-black'
+                : 'text-white/50 hover:text-white'
+                }`}
             >
               Price
             </button>
             <button
               onClick={() => setChartMetric('raised')}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${
-                chartMetric === 'raised'
-                  ? 'bg-[#00FF66] text-black'
-                  : 'text-white/50 hover:text-white'
-              }`}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${chartMetric === 'raised'
+                ? 'bg-[#00FF66] text-black'
+                : 'text-white/50 hover:text-white'
+                }`}
             >
               Raised
             </button>
@@ -435,8 +432,8 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                 <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: -5 }}>
                   <defs>
                     <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00FF66" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#00FF66" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#00FF66" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#00FF66" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
@@ -500,10 +497,6 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
               comments.map((c) => {
                 const authorName = c.user?.username || c.author || 'Anonymous';
                 const timeVal = c.createdAt || c.timestamp || new Date();
-                const likes = c.upvotedBy || c.likes || [];
-                const isUpvoted = likes.includes(user?.id || 'anon');
-                const likeCount = likes.length;
-
                 return (
                   <div key={c.id} className="flex gap-2.5">
                     <div className="w-6 h-6 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 mt-0.5">
@@ -520,19 +513,19 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                       {/* Upvote button */}
                       <button
                         onClick={() => handleUpvoteComment(c.id)}
-                        className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${
-                          isUpvoted
-                            ? 'text-[#00FF66]'
-                            : 'text-white/25 hover:text-white/50'
-                        }`}
+                        className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${(c.upvotedBy || c.likes)?.includes(user?.id || 'anon')
+                          ? 'text-[#00FF66]'
+                          : 'text-white/25 hover:text-white/50'
+                          }`}
                       >
                         <ThumbsUp className="w-3 h-3" />
-                        {likeCount > 0 ? likeCount : 'Like'}
+                        {(c.upvotedBy || c.likes)?.length > 0 ? (c.upvotedBy || c.likes).length : 'Like'}
                       </button>
                     </div>
                   </div>
-                );
-              })
+                )
+              }
+              )
             )}
           </div>
 
@@ -592,11 +585,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
         {/* Comments stat — clickable toggle */}
         <button
           onClick={handleToggleComments}
-          className={`rounded-lg border p-2.5 text-center transition-all ${
-            showComments
-              ? 'bg-[#00FF66]/10 border-[#00FF66]/30'
-              : 'bg-white/5 border-white/5 hover:bg-white/8 hover:border-white/10'
-          }`}
+          className={`rounded-lg border p-2.5 text-center transition-all ${showComments
+            ? 'bg-[#00FF66]/10 border-[#00FF66]/30'
+            : 'bg-white/5 border-white/5 hover:bg-white/8 hover:border-white/10'
+            }`}
         >
           <MessageSquare className={`w-4 h-4 mx-auto mb-1 ${showComments ? 'text-[#00FF66]' : 'text-white/50'}`} />
           <p className={`font-mono text-sm font-bold ${showComments ? 'text-[#00FF66]' : ''}`}>
