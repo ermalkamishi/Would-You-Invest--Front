@@ -110,8 +110,23 @@ export default function PitchFeed() {
   };
 
   const handlePass = async (reason) => {
+    const passedId = passTarget?.id;
+    
     if (passTarget && reason) {
-      await submitPassReason(passTarget.id, reason, token).catch(() => {});
+      // Fire and forget, don't await to keep UI snappy
+      submitPassReason(passTarget.id, reason, token).catch(() => {});
+    }
+
+    // Automatically scroll to the next pitch
+    if (passedId) {
+      const idx = feed.findIndex((p) => p.id === passedId);
+      if (idx !== -1 && idx < feed.length - 1) {
+        const nextPitch = feed[idx + 1];
+        const nextEl = cardRefs.current[nextPitch.id];
+        if (nextEl) {
+          nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     }
   };
 

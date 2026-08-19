@@ -62,7 +62,8 @@ export default function PassMenu({ isOpen, onClose, onPass }) {
           </button>
           <button
             onClick={handlePass}
-            className="flex-1 py-2.5 rounded-lg bg-[#FF3366] text-white text-sm font-bold hover:bg-[#FF3366]/80 transition-all shadow-[0_0_15px_rgba(255,51,102,0.3)]"
+            disabled={!selected}
+            className="flex-1 py-2.5 rounded-lg bg-[#FF3366] text-white text-sm font-bold hover:bg-[#FF3366]/80 transition-all shadow-[0_0_15px_rgba(255,51,102,0.3)] disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
           >
             Submit
           </button>

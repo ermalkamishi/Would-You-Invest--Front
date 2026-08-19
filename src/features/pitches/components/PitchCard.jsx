@@ -185,10 +185,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
     }).join(' ');
   };
 
-  // Calculate founder response rate to comments
-  const founderComments = comments.filter(
-    (c) => c.author === startup.founder?.username || c.author === 'founder'
-  );
+  const founderComments = comments.filter((c) => {
+    const author = c.user?.username || c.author;
+    return author === startup.founder?.username || author === 'founder';
+  });
   const responseRate = comments.length > 0
     ? Math.round((founderComments.length / comments.length) * 100)
     : 100; // Default to 100% responsive if no comments yet
@@ -497,34 +497,42 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                 <p className="text-white/15 text-[10px] mt-0.5">Be the first to share your thoughts!</p>
               </div>
             ) : (
-              comments.map((c) => (
-                <div key={c.id} className="flex gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[9px] font-bold text-[#00FF66]">{c.author[0]?.toUpperCase()}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[11px] font-semibold text-white/80">@{c.author}</span>
-                      <span className="text-[9px] text-white/20 shrink-0">
-                        {new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+              comments.map((c) => {
+                const authorName = c.user?.username || c.author || 'Anonymous';
+                const timeVal = c.createdAt || c.timestamp || new Date();
+                const likes = c.upvotedBy || c.likes || [];
+                const isUpvoted = likes.includes(user?.id || 'anon');
+                const likeCount = likes.length;
+
+                return (
+                  <div key={c.id} className="flex gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[9px] font-bold text-[#00FF66]">{authorName[0]?.toUpperCase()}</span>
                     </div>
-                    <p className="text-xs text-white/60 mt-0.5 leading-relaxed break-words">{c.text}</p>
-                    {/* Upvote button */}
-                    <button
-                      onClick={() => handleUpvoteComment(c.id)}
-                      className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${
-                        (c.upvotedBy || c.likes)?.includes(user?.id || 'anon')
-                          ? 'text-[#00FF66]'
-                          : 'text-white/25 hover:text-white/50'
-                      }`}
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                      {(c.upvotedBy || c.likes)?.length > 0 ? (c.upvotedBy || c.likes).length : 'Like'}
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[11px] font-semibold text-white/80">@{authorName}</span>
+                        <span className="text-[9px] text-white/20 shrink-0">
+                          {new Date(timeVal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/60 mt-0.5 leading-relaxed break-words">{c.text}</p>
+                      {/* Upvote button */}
+                      <button
+                        onClick={() => handleUpvoteComment(c.id)}
+                        className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${
+                          isUpvoted
+                            ? 'text-[#00FF66]'
+                            : 'text-white/25 hover:text-white/50'
+                        }`}
+                      >
+                        <ThumbsUp className="w-3 h-3" />
+                        {likeCount > 0 ? likeCount : 'Like'}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
