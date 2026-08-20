@@ -497,6 +497,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
               comments.map((c) => {
                 const authorName = c.user?.username || c.author || 'Anonymous';
                 const timeVal = c.createdAt || c.timestamp || new Date();
+                const likes = c.upvotedBy || c.likes || [];
+                const isUpvoted = likes.includes(user?.id || 'anon');
+                const likeCount = likes.length;
+
                 return (
                   <div key={c.id} className="flex gap-2.5">
                     <div className="w-6 h-6 rounded-full bg-[#00FF66]/20 border border-[#00FF66]/30 flex items-center justify-center shrink-0 mt-0.5">
@@ -513,19 +517,19 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                       {/* Upvote button */}
                       <button
                         onClick={() => handleUpvoteComment(c.id)}
-                        className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${(c.upvotedBy || c.likes)?.includes(user?.id || 'anon')
-                          ? 'text-[#00FF66]'
-                          : 'text-white/25 hover:text-white/50'
-                          }`}
+                        className={`mt-1 flex items-center gap-1 text-[9px] font-bold transition-colors ${
+                          isUpvoted
+                            ? 'text-[#00FF66]'
+                            : 'text-white/25 hover:text-white/50'
+                        }`}
                       >
                         <ThumbsUp className="w-3 h-3" />
-                        {(c.upvotedBy || c.likes)?.length > 0 ? (c.upvotedBy || c.likes).length : 'Like'}
+                        {likeCount > 0 ? likeCount : 'Like'}
                       </button>
                     </div>
                   </div>
-                )
-              }
-              )
+                );
+              })
             )}
           </div>
 
