@@ -14,11 +14,14 @@ const TABS = [
 
 // BoardTable.jsx
 
+const EMPTY_ARRAY = [];
+
 export default function BoardTable() {
   const [activeTab, setActiveTab] = useState('hot');
   const [selectedCategory, setSelectedCategory] = useState('AI');
   const [backersLeaderboard, setBackersLeaderboard] = useState([]);
-  const realPitches = useSelector((s) => s.pitches.feed) || [];
+  const rawPitches = useSelector((s) => s.pitches.feed);
+  const realPitches = rawPitches || EMPTY_ARRAY;
 
   // Fetch real ROI leaderboard from backend when ROI tab is selected
   useEffect(() => {

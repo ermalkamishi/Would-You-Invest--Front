@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { createPitch } from '../features/pitches/pitchesApi';
-import { CheckCircle2, AlertTriangle, Rocket, UserCircle2, ChevronRight, ChevronLeft, Sparkles, DollarSign, Zap, Target, Tag, Link, BarChart2, Award } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Rocket, UserCircle2, ChevronRight, ChevronLeft, Sparkles, DollarSign, Zap, Link, BarChart2, Award } from 'lucide-react';
 import { openLoginModal } from '../features/auth/authSlice';
 
 const CATEGORIES = ['AI', 'Climate', 'Consumer', 'B2B', 'Fintech', 'Health', 'Education', 'Crypto', 'Other'];
@@ -141,8 +141,6 @@ export default function CreatePitchPage() {
       </div>
     );
   }
-
-  const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 
   return (
     <div className="max-w-[800px] mx-auto w-full px-4 py-6">

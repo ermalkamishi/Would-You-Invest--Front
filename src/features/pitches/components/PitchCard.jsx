@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Sparkles, Users, TrendingUp, MessageSquare, Flag, Send, X, ThumbsUp, Share2, Loader2 } from 'lucide-react';
+import { Users, TrendingUp, MessageSquare, Flag, Send, ThumbsUp, Share2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { useTickerPrice } from '../../../hooks/useTickerPrice';
-import { addComment, upvoteComment, patchPitchStats } from '../pitchesSlice';
+import { addComment, upvoteComment } from '../pitchesSlice';
 import { addCommentToPitch, upvoteCommentApi, fetchInvestmentHistory } from '../pitchesApi';
 import { updateProfileSuccess, openLoginModal } from '../../auth/authSlice';
 import LearnMoreModal from './LearnMoreModal';
@@ -83,7 +83,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
     return () => {
       active = false;
     };
-  }, [isActive, startup.id, startup.totalRaised]);
+  }, [isActive, startup]);
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -145,53 +145,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
     tickerColorClass = priceUp ? 'text-[#00FF66]' : 'text-[#FF3366]';
   }
 
-  // Parse YouTube links
-  const getYoutubeEmbedUrl = (url) => {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    if (match && match[2].length === 11) {
-      return `https://www.youtube.com/embed/${match[2]}`;
-    }
-    return null;
-  };
 
-  const baseYoutubeUrl = getYoutubeEmbedUrl(startup.demoClipUrl);
-  const youtubeEmbedUrl = baseYoutubeUrl && isActive
-    ? `${baseYoutubeUrl}?autoplay=1&mute=1&enablejsapi=1`
-    : null;
-
-  // Generate deterministic 7-day sparkline points based on pitch ID
-  const generateSparklinePoints = (id, basePrice) => {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) {
-      hash = id.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const points = [];
-    for (let i = 0; i < 7; i++) {
-      const val = basePrice * (1 + (Math.sin(hash + i) * 0.12));
-      points.push(val);
-    }
-    points[6] = basePrice;
-
-    const min = Math.min(...points);
-    const max = Math.max(...points);
-    const range = max - min || 1;
-
-    return points.map((p, idx) => {
-      const x = idx * 10;
-      const y = 18 - ((p - min) / range) * 16; // Bounds: y in [2, 18]
-      return `${x},${y}`;
-    }).join(' ');
-  };
-
-  const founderComments = comments.filter((c) => {
-    const author = c.user?.username || c.author;
-    return author === startup.founder?.username || author === 'founder';
-  });
-  const responseRate = comments.length > 0
-    ? Math.round((founderComments.length / comments.length) * 100)
-    : 100; // Default to 100% responsive if no comments yet
 
   // Autoplay raw HTML5 video elements when card becomes active
   useEffect(() => {
