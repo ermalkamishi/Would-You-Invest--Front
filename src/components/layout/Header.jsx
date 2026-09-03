@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { TrendingUp } from 'lucide-react';
 import WalletStatus from '../../features/wallet/components/WalletStatus';
+import NotificationDropdown from '../../features/notifications/components/NotificationDropdown';
 import { NAV_ITEMS } from './navItems';
 
 export default function Header({ onLoginClick }) {
@@ -48,7 +49,8 @@ export default function Header({ onLoginClick }) {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {isAuthenticated && <NotificationDropdown />}
           {isAuthenticated && <WalletStatus />}
           {isAuthenticated ? (
             <NavLink

@@ -10,12 +10,14 @@ import authReducer from '../features/auth/authSlice';
 import walletReducer from '../features/wallet/walletSlice';
 import pitchesReducer from '../features/pitches/pitchesSlice';
 import leaderboardReducer from '../features/leaderboard/leaderboardSlice';
+import notificationsReducer from '../features/notifications/notificationsSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   wallet: walletReducer,
   pitches: pitchesReducer,
   leaderboard: leaderboardReducer,
+  notifications: notificationsReducer,
 });
 
 const persistConfig = {

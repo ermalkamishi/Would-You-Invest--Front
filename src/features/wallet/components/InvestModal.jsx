@@ -15,14 +15,13 @@ export default function InvestModal({ isOpen, onClose, startup, onInvest }) {
 
   if (!isOpen || !startup) return null;
 
-  const maxAllowed = Math.min(balance, balance * 0.2); // 20% concentration limit
+  const maxAllowed = Number(balance || 0);
   const sharePrice = Number(startup.currentPrice);
   const sharesYouGet = amount / sharePrice;
-  const isOverLimit = amount > maxAllowed;
   const isInsufficientFunds = amount > balance;
 
   const handleInvest = async () => {
-    if (isOverLimit || isInsufficientFunds || amount <= 0) return;
+    if (isInsufficientFunds || amount <= 0) return;
     setIsSubmitting(true);
     try {
       await onInvest(startup.id, amount);
@@ -66,7 +65,7 @@ export default function InvestModal({ isOpen, onClose, startup, onInvest }) {
           {QUICK_AMOUNTS.map((q) => (
             <button
               key={q}
-              onClick={() => setAmount(q)}
+              onClick={() => setAmount(Math.min(q, maxAllowed || q))}
               className={`py-2 rounded-lg text-sm font-mono font-medium transition-all border ${
                 amount === q
                   ? 'bg-[#00FF66]/20 border-[#00FF66]/50 text-[#00FF66]'
@@ -100,12 +99,6 @@ export default function InvestModal({ isOpen, onClose, startup, onInvest }) {
         </div>
 
         {/* Warnings */}
-        {isOverLimit && (
-          <div className="mb-3 flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-xs">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            Max 20% of wallet in one idea ({formatCurrency(Math.floor(maxAllowed))})
-          </div>
-        )}
         {isInsufficientFunds && (
           <div className="mb-3 flex items-center gap-2 p-2 rounded-lg bg-[#FF3366]/10 border border-[#FF3366]/30 text-[#FF3366] text-xs">
             <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -131,7 +124,7 @@ export default function InvestModal({ isOpen, onClose, startup, onInvest }) {
 
         <button
           onClick={handleInvest}
-          disabled={isSubmitting || isOverLimit || isInsufficientFunds || amount <= 0}
+          disabled={isSubmitting || isInsufficientFunds || amount <= 0}
           className="w-full py-3 rounded-lg bg-[#00FF66] text-black font-bold text-lg hover:bg-[#00FF66]/80 transition-all shadow-[0_0_20px_rgba(0,255,102,0.3)] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <TrendingUp className="w-5 h-5 inline-block mr-2 -mt-0.5" />

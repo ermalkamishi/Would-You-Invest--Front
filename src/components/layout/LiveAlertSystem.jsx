@@ -1,29 +1,69 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setHighlightPitchId } from '../../features/pitches/pitchesSlice';
+import { addNotification } from '../../features/notifications/notificationsSlice';
+import { formatCurrency } from '../../utils/formatCurrency';
+import { calculateROI } from '../../utils/calculateROI';
 
-// ── GENERATE REAL ALERTS FROM PITCHES ─────────────────────────────────────────
-function generateRealAlerts(pitches) {
+// ── GENERATE REAL ALERTS FROM PITCHES & USER HOLDINGS ─────────────────────────
+function generateRealAlerts(pitches, userPortfolio = []) {
   const alerts = [];
   if (!pitches || pitches.length === 0) return alerts;
 
-  pitches.forEach((pitch) => {
-    // 1. Pitch creation event
-    const founderName = pitch.founder?.username || 'A founder';
-    const pitchTitle = pitch.problem.length > 40 ? pitch.problem.slice(0, 40) + '…' : pitch.problem;
-    
-    alerts.push({
-      id: `pitch-${pitch.id}`,
-      type: 'NEW_PITCH',
-      emoji: '🚀',
-      color: '#00FF66',
-      pitchId: pitch.id,
-      msg: `${founderName} launched a new pitch: "${pitchTitle}" in ${pitch.category}!`,
+  const portfolioMap = new Map();
+  if (Array.isArray(userPortfolio)) {
+    userPortfolio.forEach((h) => {
+      portfolioMap.set(h.id, h);
     });
+  }
 
-    // 2. Funding/Raised event
+  pitches.forEach((pitch) => {
+    const founderName = pitch.founder?.username || 'A founder';
+    const pitchTitle = pitch.problem.length > 35 ? pitch.problem.slice(0, 35) + '…' : pitch.problem;
+    const price = Number(pitch.currentPrice || 0.01);
     const raised = Number(pitch.totalRaised || 0);
+
+    // 1. Check if user holds shares in this startup -> PERSONAL INVESTMENT ALERTS (HIGHEST PRIORITY)
+    if (portfolioMap.has(pitch.id)) {
+      const holding = portfolioMap.get(pitch.id);
+      const entryPrice = Number(holding.entryPrice || 0.01);
+      const shares = Number(holding.sharesBought || 0);
+      const currentVal = shares * price;
+      const invested = Number(holding.amountInvested || shares * entryPrice);
+      const pnlGain = currentVal - invested;
+      const roiStr = calculateROI(invested, currentVal);
+
+      if (price > entryPrice) {
+        alerts.unshift({
+          id: `holding-gain-${pitch.id}-${Math.floor(price * 1000)}`,
+          type: 'PORTFOLIO_GAIN',
+          emoji: '📈',
+          color: '#00FF66',
+          pitchId: pitch.id,
+          title: `Position Gain: +${roiStr}`,
+          msg: `Your investment in "${pitchTitle}" is up ${roiStr}! Live value: ${formatCurrency(Math.round(currentVal))}.`,
+          details: `${shares.toFixed(0)} shares @ $${price.toFixed(4)}/sh`,
+          isPortfolioAlert: true,
+        });
+      }
+
+      if (raised > 0) {
+        alerts.unshift({
+          id: `holding-funding-${pitch.id}-${Math.floor(raised / 500)}`,
+          type: 'FUNDING',
+          emoji: '💰',
+          color: '#FFB800',
+          pitchId: pitch.id,
+          title: `Funding Milestone: ${pitchTitle}`,
+          msg: `"${pitchTitle}" reached ${formatCurrency(raised)} in funding! You hold ${shares.toFixed(0)} shares.`,
+          details: `${pitch.investorCount || 0} total investors`,
+          isPortfolioAlert: true,
+        });
+      }
+    }
+
+    // 2. Global market activity alerts
     if (raised > 0) {
       alerts.push({
         id: `raised-${pitch.id}`,
@@ -31,33 +71,49 @@ function generateRealAlerts(pitches) {
         emoji: '💰',
         color: '#FF9900',
         pitchId: pitch.id,
-        msg: `"${pitchTitle}" has raised $${raised.toLocaleString()} from ${pitch.investorCount || 0} investor(s)!`,
+        title: `Ecosystem Funding`,
+        msg: `"${pitchTitle}" has raised ${formatCurrency(raised)} from ${pitch.investorCount || 0} backers!`,
+        isPortfolioAlert: false,
       });
-      
-      // 3. Price change event
-      const price = Number(pitch.currentPrice || 0);
+
       alerts.push({
         id: `price-${pitch.id}`,
         type: 'PRICE_UPDATE',
         emoji: '📈',
         color: '#00BFFF',
         pitchId: pitch.id,
-        msg: `"${pitchTitle}" share price is up to $${price.toFixed(4)}!`,
+        title: `Price Surge`,
+        msg: `"${pitchTitle}" share price reached $${price.toFixed(4)}!`,
+        isPortfolioAlert: false,
+      });
+    } else {
+      alerts.push({
+        id: `pitch-${pitch.id}`,
+        type: 'NEW_PITCH',
+        emoji: '🚀',
+        color: '#00FF66',
+        pitchId: pitch.id,
+        title: `New Startup Live`,
+        msg: `${founderName} launched pitch: "${pitchTitle}" in ${pitch.category}!`,
+        isPortfolioAlert: false,
       });
     }
 
-    // 4. Comment events
+    // 3. Comments / Community engagement
     if (pitch.comments && pitch.comments.length > 0) {
-      pitch.comments.forEach((c, idx) => {
+      pitch.comments.slice(-2).forEach((c, idx) => {
         const commentAuthor = c.user?.username || 'An investor';
-        const commentText = c.text.length > 40 ? c.text.slice(0, 40) + '…' : c.text;
+        const commentText = c.text.length > 35 ? c.text.slice(0, 35) + '…' : c.text;
+        const isUserHolding = portfolioMap.has(pitch.id);
         alerts.push({
           id: `comment-${pitch.id}-${idx}`,
           type: 'COMMENT',
           emoji: '💬',
           color: '#FF3366',
           pitchId: pitch.id,
-          msg: `${commentAuthor} commented: "${commentText}" on "${pitchTitle}"`,
+          title: isUserHolding ? `Discussion on Your Holding` : `New Comment`,
+          msg: `${commentAuthor}: "${commentText}" on "${pitchTitle}"`,
+          isPortfolioAlert: isUserHolding,
         });
       });
     }
@@ -72,8 +128,8 @@ function LiveToast({ alert, onDismiss, onClick }) {
 
   useEffect(() => {
     const t1 = setTimeout(() => setVisible(true), 50);
-    const t2 = setTimeout(() => { setVisible(false); }, 5200);
-    const t3 = setTimeout(onDismiss, 5800);
+    const t2 = setTimeout(() => { setVisible(false); }, 5800);
+    const t3 = setTimeout(onDismiss, 6400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDismiss]);
 
@@ -86,29 +142,58 @@ function LiveToast({ alert, onDismiss, onClick }) {
         transform: visible ? 'translateX(0)' : 'translateX(120%)',
         opacity: visible ? 1 : 0,
         transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease',
-        borderColor: `${alert.color}40`,
+        borderColor: alert.isPortfolioAlert ? '#00FF66' : `${alert.color}40`,
         cursor: isClickable ? 'pointer' : 'default',
+        boxShadow: alert.isPortfolioAlert
+          ? '0 0 25px rgba(0,255,102,0.25), 0 10px 30px rgba(0,0,0,0.8)'
+          : '0 10px 30px rgba(0,0,0,0.6)',
       }}
-      className={`pointer-events-auto w-80 rounded-xl border bg-[hsl(240,12%,7%)] backdrop-blur-sm shadow-2xl px-4 py-3 flex items-start gap-3 relative ${
-        isClickable ? 'hover:bg-[hsl(240,12%,10%)] transition-colors group' : ''
+      className={`pointer-events-auto w-84 sm:w-96 rounded-2xl border bg-[hsl(240,12%,7%)] backdrop-blur-xl px-4 py-3.5 flex items-start gap-3 relative overflow-hidden ${
+        isClickable ? 'hover:bg-[hsl(240,12%,10%)] transition-all group' : ''
       }`}
     >
-      <span className="text-xl shrink-0 mt-0.5">{alert.emoji}</span>
+      {/* Top ambient highlight */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px]"
+        style={{
+          background: alert.isPortfolioAlert
+            ? 'linear-gradient(90deg, transparent, #00FF66, transparent)'
+            : `linear-gradient(90deg, transparent, ${alert.color}, transparent)`,
+        }}
+      />
+
+      <span className="text-2xl shrink-0 mt-0.5">{alert.emoji}</span>
+      
       <div className="flex-1 min-w-0 pr-6">
-        <p className={`text-xs font-semibold leading-relaxed text-white/90 ${isClickable ? 'group-hover:text-white' : ''}`}>
+        <div className="flex items-center gap-1.5 mb-1">
+          {alert.isPortfolioAlert ? (
+            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-[#00FF66] bg-[#00FF66]/20 border border-[#00FF66]/40 px-1.5 py-0.2 rounded-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00FF66] animate-pulse" />
+              YOUR INVESTMENT
+            </span>
+          ) : (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 font-mono">
+              MARKET ACTIVITY
+            </span>
+          )}
+        </div>
+
+        <p className={`text-xs font-semibold leading-relaxed text-white/95 ${isClickable ? 'group-hover:text-white' : ''}`}>
           {alert.msg}
         </p>
+
         {isClickable && (
-          <p className="text-[9px] text-[#00FF66]/60 mt-1 font-mono uppercase tracking-wider group-hover:text-[#00FF66] transition-colors">
-            Tap to view pitch →
+          <p className="text-[9px] text-[#00FF66]/70 mt-1 font-mono uppercase tracking-wider group-hover:text-[#00FF66] transition-colors flex items-center gap-1">
+            Tap to view position & pitch →
           </p>
         )}
-        <div className="mt-1.5 h-[2px] rounded-full bg-white/5 overflow-hidden">
+
+        <div className="mt-2 h-[2px] rounded-full bg-white/5 overflow-hidden">
           <div
             className="h-full rounded-full"
             style={{
-              backgroundColor: alert.color,
-              animation: 'shrinkBar 5s linear forwards',
+              backgroundColor: alert.isPortfolioAlert ? '#00FF66' : alert.color,
+              animation: 'shrinkBar 5.8s linear forwards',
             }}
           />
         </div>
@@ -123,7 +208,7 @@ function LiveToast({ alert, onDismiss, onClick }) {
         className="absolute top-2.5 right-2.5 p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"
         aria-label="Dismiss alert"
       >
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
@@ -154,6 +239,8 @@ export default function LiveAlertSystem() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const pitches = useSelector((s) => s.pitches.feed);
+  const user = useSelector((s) => s.auth.user);
+  const userPortfolio = user?.portfolio || [];
 
   const [tickerAlerts, setTickerAlerts] = useState([]);
   const [toasts, setToasts] = useState([]);
@@ -162,9 +249,8 @@ export default function LiveAlertSystem() {
   // Sync tickerAlerts based on pitches changes
   useEffect(() => {
     if (pitches && pitches.length > 0) {
-      const realAlerts = generateRealAlerts(pitches);
+      const realAlerts = generateRealAlerts(pitches, userPortfolio);
       let displayAlerts = [...realAlerts];
-      // Repeat alerts to fill the ticker nicely if there are few
       while (displayAlerts.length < 5 && displayAlerts.length > 0) {
         displayAlerts = [...displayAlerts, ...realAlerts];
       }
@@ -172,46 +258,56 @@ export default function LiveAlertSystem() {
     } else {
       setTickerAlerts([]);
     }
-  }, [pitches]);
+  }, [pitches, userPortfolio]);
 
-  // Generate periodic toasts of real activity
+  // Generate periodic toasts of real activity and portfolio alerts
   useEffect(() => {
     if (!pitches || pitches.length === 0) return;
 
-    // Trigger first toast faster on mount/load if there is any activity
-    const timeoutOnMount = setTimeout(() => {
-      const realAlerts = generateRealAlerts(pitches);
-      if (realAlerts.length > 0) {
-        const randomAlert = realAlerts[Math.floor(Math.random() * realAlerts.length)];
-        const id = Date.now();
-        setToasts((prev) => [...prev, { id, alert: randomAlert }]);
+    const triggerToast = () => {
+      const allAlerts = generateRealAlerts(pitches, userPortfolio);
+      if (allAlerts.length === 0) return;
+
+      // Prioritize portfolio alerts 70% of the time if user has any holdings
+      const portfolioAlerts = allAlerts.filter((a) => a.isPortfolioAlert);
+      let chosenAlert;
+      if (portfolioAlerts.length > 0 && Math.random() < 0.7) {
+        chosenAlert = portfolioAlerts[Math.floor(Math.random() * portfolioAlerts.length)];
+      } else {
+        chosenAlert = allAlerts[Math.floor(Math.random() * allAlerts.length)];
       }
-    }, 5000);
 
-    intervalRef.current = setInterval(() => {
-      const realAlerts = generateRealAlerts(pitches);
-      if (realAlerts.length === 0) return;
+      if (chosenAlert) {
+        const id = Date.now();
+        setToasts((prev) => [...prev, { id, alert: chosenAlert }]);
+        dispatch(addNotification(chosenAlert));
+      }
+    };
 
-      const randomAlert = realAlerts[Math.floor(Math.random() * realAlerts.length)];
-      const id = Date.now();
-      setToasts((prev) => [...prev, { id, alert: randomAlert }]);
-    }, 25000); // Trigger toast notification every 25 seconds
+    // First toast on mount
+    const timeoutOnMount = setTimeout(triggerToast, 3500);
+
+    // Periodic toasts every 20 seconds
+    intervalRef.current = setInterval(triggerToast, 20000);
 
     return () => {
       clearTimeout(timeoutOnMount);
       clearInterval(intervalRef.current);
     };
-  }, [pitches]);
+  }, [pitches, userPortfolio, dispatch]);
 
   const dismissToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleAlertClick = (alert, id) => {
-    if (!alert.pitchId) return;
-    dispatch(setHighlightPitchId(alert.pitchId));
     dismissToast(id);
-    navigate('/');
+    if (alert.pitchId) {
+      dispatch(setHighlightPitchId(alert.pitchId));
+      navigate('/');
+    } else if (alert.isPortfolioAlert) {
+      navigate('/portfolio');
+    }
   };
 
   if (!pitches || pitches.length === 0) {
