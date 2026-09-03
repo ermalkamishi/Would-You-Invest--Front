@@ -32,14 +32,14 @@ export default function FeedPage() {
   }, [isAuthenticated, isFounder]);
 
   return (
-    <div className="w-full min-h-[calc(100dvh-112px)] md:min-h-[calc(100dvh-56px)] bg-[hsl(240,15%,4%)] flex flex-col">
+    <div className="w-full flex-1 flex flex-col min-h-0 overflow-hidden bg-[hsl(240,15%,4%)]">
       {/* Top View Mode Switcher for Logged-In Investors */}
       {isAuthenticated && !isFounder && (
-        <div className="w-full border-b border-white/10 bg-[hsl(240,12%,6%)]/80 backdrop-blur-md sticky top-14 z-30 px-4 py-2.5 flex items-center justify-center">
+        <div className="w-full shrink-0 border-b border-white/10 bg-[hsl(240,12%,6%)]/80 backdrop-blur-md px-4 py-2 flex items-center justify-center z-20">
           <div className="inline-flex p-1 rounded-xl bg-white/5 border border-white/10 gap-1 shadow-inner">
             <button
               onClick={() => setViewMode('dashboard')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 viewMode === 'dashboard'
                   ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.3)]'
                   : 'text-white/50 hover:text-white'
@@ -51,7 +51,7 @@ export default function FeedPage() {
 
             <button
               onClick={() => setViewMode('feed')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 viewMode === 'feed'
                   ? 'bg-[#00FF66] text-black shadow-[0_0_15px_rgba(0,255,102,0.3)]'
                   : 'text-white/50 hover:text-white'
@@ -65,11 +65,13 @@ export default function FeedPage() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full">
+      <div className="flex-1 w-full min-h-0 overflow-hidden flex flex-col">
         {viewMode === 'dashboard' && isAuthenticated && !isFounder ? (
-          <CryptoInvestmentDashboard onSwitchToFeed={() => setViewMode('feed')} />
+          <div className="flex-1 w-full overflow-y-auto">
+            <CryptoInvestmentDashboard onSwitchToFeed={() => setViewMode('feed')} />
+          </div>
         ) : (
-          <div className="w-full h-[calc(100dvh-112px)] md:h-[calc(100dvh-56px)]">
+          <div className="flex-1 w-full min-h-0 h-full overflow-hidden">
             <PitchFeed />
           </div>
         )}

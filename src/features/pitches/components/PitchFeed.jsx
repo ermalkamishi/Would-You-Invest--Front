@@ -163,9 +163,9 @@ export default function PitchFeed() {
             key={startup.id}
             ref={(el) => { cardRefs.current[startup.id] = el; }}
             data-pitch-id={startup.id}
-            className="h-full w-full snap-start snap-always flex items-center justify-center py-4 px-4"
+            className="h-full w-full snap-start snap-always flex items-center justify-center py-1.5 px-2 sm:py-3 sm:px-4"
           >
-            <div className="w-full max-w-[800px] h-full">
+            <div className="w-full max-w-[760px] h-full">
               <PitchCard
                 startup={startup}
                 isActive={startup.id === activePitchId}

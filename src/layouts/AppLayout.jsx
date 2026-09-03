@@ -24,12 +24,12 @@ export default function AppLayout() {
   }, [location]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`flex flex-col ${isFeed ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
       <Header onLoginClick={() => dispatch(openLoginModal())} />
       <LiveAlertSystem />
 
       {/* Page content */}
-      <main className="flex-1 w-full flex flex-col">
+      <main className={`flex-1 w-full flex flex-col ${isFeed ? 'min-h-0 overflow-hidden' : ''}`}>
         <Outlet />
       </main>
 

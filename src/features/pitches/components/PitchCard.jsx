@@ -269,12 +269,12 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
   }
 
   return (
-    <div className="w-full h-full rounded-xl border border-white/10 bg-[hsl(240,10%,6%)]/80 backdrop-blur-sm overflow-y-auto no-scrollbar shadow-2xl relative group flex flex-col">
+    <div className="w-full h-full rounded-2xl border border-white/10 bg-[hsl(240,10%,6%)]/90 backdrop-blur-md overflow-hidden shadow-2xl relative group flex flex-col justify-between">
       {/* Neon top border */}
       <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#00FF66] to-transparent opacity-50" />
 
       {/* Header */}
-      <div className="p-5 pb-3 relative">
+      <div className="p-3.5 sm:p-5 pb-2 sm:pb-3 relative">
         {/* Toast Notification */}
         {showToast && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/90 border border-[#FF3366]/50 text-[#FF3366] px-3 py-1.5 rounded-full text-xs font-semibold shadow-[0_0_10px_rgba(255,51,102,0.2)] animate-in slide-in-from-top-2 fade-in z-10 flex items-center gap-1.5 whitespace-nowrap">
@@ -283,16 +283,16 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
         )}
 
         <div className="flex items-start justify-between">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0 pr-2">
             {/* Founder details & follow badge */}
-            <div className="flex flex-wrap items-center gap-2 mt-1 mb-2 text-[10px] text-white/40">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-0.5 mb-1.5 text-[10px] text-white/40">
               {startup.founder?.isStealth ? (
                 <span className="inline-flex items-center gap-1 italic text-white/30">
                   👤 Stealth Founder
                 </span>
               ) : (
                 <>
-                  <span className="inline-flex items-center gap-1 font-semibold text-white/60">
+                  <span className="inline-flex items-center gap-1 font-semibold text-white/60 truncate max-w-[140px] sm:max-w-none">
                     👤 @{startup.founder?.username || 'anonymous'}
                   </span>
                   {startup.founder && (!user || startup.founder.id !== user.id) && (
@@ -300,7 +300,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
                       type="button"
                       onClick={handleFollowToggle}
                       disabled={followLoading}
-                      className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all border ${isFollowing
+                      className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider transition-all border ${isFollowing
                         ? 'bg-[#00FF66]/10 border-[#00FF66]/30 text-[#00FF66]'
                         : 'bg-white/5 border-white/10 text-white/40 hover:bg-[#00FF66]/10 hover:border-[#00FF66]/30 hover:text-[#00FF66]'
                         }`}
@@ -322,11 +322,11 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
               )}
             </div>
 
-            <h3 className="text-lg font-bold leading-tight text-white mb-2">{startup.problem}</h3>
+            <h3 className="text-sm sm:text-lg font-bold leading-snug text-white line-clamp-2 sm:line-clamp-none">{startup.problem}</h3>
           </div>
 
-          <div className="flex flex-col items-end gap-1 text-right ml-3 shrink-0">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-col items-end gap-0.5 text-right shrink-0">
+            <div className="flex items-center gap-2 mb-0.5">
               <button
                 onClick={handleFlag}
                 className="text-white/20 hover:text-[#FF3366] transition-colors p-1 rounded-full hover:bg-[#FF3366]/10"
@@ -336,10 +336,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
               </button>
             </div>
             <div>
-              <span className={`font-mono text-lg font-bold block leading-none ${tickerColorClass}`}>
+              <span className={`font-mono text-base sm:text-lg font-bold block leading-none ${tickerColorClass}`}>
                 ${tickerPrice.toFixed(4)}
               </span>
-              <p className="text-[10px] text-white/30 mt-1">/share</p>
+              <p className="text-[9px] sm:text-[10px] text-white/30 mt-0.5">/share</p>
             </div>
           </div>
         </div>
@@ -347,12 +347,12 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
 
       {/* Metric Selector & Traction Chart Header */}
       {!showComments && (
-        <div className="flex justify-between items-center px-5 mb-2">
-          <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Traction Chart</h4>
+        <div className="flex justify-between items-center px-3.5 sm:px-5 mb-1.5 sm:mb-2">
+          <h4 className="text-[9px] sm:text-[10px] font-bold text-white/40 uppercase tracking-wider">Traction Chart</h4>
           <div className="flex bg-white/5 rounded-md p-0.5 border border-white/10">
             <button
               onClick={() => setChartMetric('price')}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${chartMetric === 'price'
+              className={`px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase transition-all ${chartMetric === 'price'
                 ? 'bg-[#00FF66] text-black'
                 : 'text-white/50 hover:text-white'
                 }`}
@@ -361,7 +361,7 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
             </button>
             <button
               onClick={() => setChartMetric('raised')}
-              className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase transition-all ${chartMetric === 'raised'
+              className={`px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase transition-all ${chartMetric === 'raised'
                 ? 'bg-[#00FF66] text-black'
                 : 'text-white/50 hover:text-white'
                 }`}
@@ -374,14 +374,14 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
 
       {/* Chart area — hidden when comments are open */}
       {!showComments && (
-        <div className="relative mx-5 flex-1 min-h-[260px] rounded-lg bg-black/60 border border-white/5 p-3 flex flex-col justify-center mb-4 overflow-hidden">
+        <div className="relative mx-3.5 sm:mx-5 flex-1 min-h-[140px] sm:min-h-[220px] rounded-xl bg-black/60 border border-white/5 p-2 sm:p-3 flex flex-col justify-center mb-2 sm:mb-4 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-tr from-[#00FF66]/5 to-transparent pointer-events-none" />
           {chartLoading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader2 className="w-5 h-5 text-[#00FF66] animate-spin" />
             </div>
           ) : (
-            <div className="w-full h-full min-h-[240px]">
+            <div className="w-full h-full min-h-[120px] sm:min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: -5 }}>
                   <defs>
@@ -517,10 +517,10 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
 
       {/* Learn more action */}
       {!showComments && (
-        <div className="px-5 mb-4">
+        <div className="px-3.5 sm:px-5 mb-2 sm:mb-3">
           <button
             onClick={() => setIsLearnMoreOpen(true)}
-            className="w-full py-2.5 px-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/8 hover:border-[#00FF66]/30 text-[#00FF66] text-xs font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-[0_0_10px_rgba(0,255,102,0.05)]"
+            className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#00FF66]/30 text-[#00FF66] text-[11px] sm:text-xs font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 shadow-sm"
           >
             Learn more about this idea →
           </button>
@@ -528,45 +528,45 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
       )}
 
       {/* Stats bar */}
-      <div className="mx-5 grid grid-cols-3 gap-2 mb-4">
-        <div className="rounded-lg bg-white/5 border border-white/5 p-2.5 text-center">
-          <TrendingUp className="w-4 h-4 text-[#00FF66] mx-auto mb-1" />
-          <p className="font-mono text-sm font-bold">{formatCurrency(startup.totalRaised)}</p>
-          <p className="text-[10px] text-white/30">Raised</p>
+      <div className="mx-3.5 sm:mx-5 grid grid-cols-3 gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+        <div className="rounded-xl bg-white/5 border border-white/5 p-2 sm:p-2.5 text-center">
+          <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#00FF66] mx-auto mb-0.5" />
+          <p className="font-mono text-xs sm:text-sm font-bold">{formatCurrency(startup.totalRaised)}</p>
+          <p className="text-[9px] sm:text-[10px] text-white/30">Raised</p>
         </div>
-        <div className="rounded-lg bg-white/5 border border-white/5 p-2.5 text-center">
-          <Users className="w-4 h-4 text-white/50 mx-auto mb-1" />
-          <p className="font-mono text-sm font-bold">{startup.investorCount}</p>
-          <p className="text-[10px] text-white/30">Investors</p>
+        <div className="rounded-xl bg-white/5 border border-white/5 p-2 sm:p-2.5 text-center">
+          <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white/50 mx-auto mb-0.5" />
+          <p className="font-mono text-xs sm:text-sm font-bold">{startup.investorCount}</p>
+          <p className="text-[9px] sm:text-[10px] text-white/30">Investors</p>
         </div>
 
         {/* Comments stat — clickable toggle */}
         <button
           onClick={handleToggleComments}
-          className={`rounded-lg border p-2.5 text-center transition-all ${showComments
+          className={`rounded-xl border p-2 sm:p-2.5 text-center transition-all ${showComments
             ? 'bg-[#00FF66]/10 border-[#00FF66]/30'
             : 'bg-white/5 border-white/5 hover:bg-white/8 hover:border-white/10'
             }`}
         >
-          <MessageSquare className={`w-4 h-4 mx-auto mb-1 ${showComments ? 'text-[#00FF66]' : 'text-white/50'}`} />
-          <p className={`font-mono text-sm font-bold ${showComments ? 'text-[#00FF66]' : ''}`}>
+          <MessageSquare className={`w-3.5 h-3.5 sm:w-4 sm:h-4 mx-auto mb-0.5 ${showComments ? 'text-[#00FF66]' : 'text-white/50'}`} />
+          <p className={`font-mono text-xs sm:text-sm font-bold ${showComments ? 'text-[#00FF66]' : ''}`}>
             {comments.length > 0 ? comments.length : '—'}
           </p>
-          <p className="text-[10px] text-white/30">{showComments ? 'Hide' : 'Comments'}</p>
+          <p className="text-[9px] sm:text-[10px] text-white/30">{showComments ? 'Hide' : 'Comments'}</p>
         </button>
       </div>
 
       {/* Action buttons */}
-      <div className="p-5 pt-0 flex gap-2">
+      <div className="p-3.5 sm:p-5 pt-0 flex gap-2">
         <button
           onClick={() => onPass(startup)}
-          className="w-1/4 py-2.5 rounded-lg bg-transparent border border-white/10 text-white/60 text-sm font-medium hover:bg-[#FF3366]/10 hover:text-[#FF3366] hover:border-[#FF3366]/50 transition-all"
+          className="w-1/4 py-2 sm:py-2.5 rounded-xl bg-transparent border border-white/10 text-white/60 text-xs sm:text-sm font-medium hover:bg-[#FF3366]/10 hover:text-[#FF3366] hover:border-[#FF3366]/50 transition-all"
         >
           Pass
         </button>
         <button
           onClick={() => onInvest(startup)}
-          className="flex-1 py-2.5 rounded-lg bg-[#00FF66] text-black text-sm font-bold hover:bg-[#00FF66]/80 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]"
+          className="flex-1 py-2 sm:py-2.5 rounded-xl bg-[#00FF66] text-black text-xs sm:text-sm font-bold hover:bg-[#00FF66]/80 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]"
         >
           Invest
         </button>
@@ -583,9 +583,9 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
             }
           }}
           title="Share this pick"
-          className="w-10 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-white/50 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-400/30 transition-all"
+          className="w-9 sm:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-400/30 transition-all"
         >
-          <Share2 className="w-4 h-4" />
+          <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
       </div>
 
