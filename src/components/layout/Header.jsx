@@ -20,7 +20,7 @@ export default function Header({ onLoginClick }) {
   });
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-white/5 w-full">
+    <header className="sticky top-0 z-50 shrink-0 glass border-b border-white/5 w-full">
       <div className="w-full px-4 md:px-8 h-14 flex items-center justify-between">
         {/* Logo */}
         <NavLink to="/" className="flex items-center gap-2">
@@ -32,20 +32,20 @@ export default function Header({ onLoginClick }) {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
-          {visibleNav.map((item) => {
-            const isActive = location.pathname === item.to;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={`text-sm font-medium transition-colors ${
+          {visibleNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors ${
                   isActive ? 'text-[#00FF66]' : 'text-white/40 hover:text-white'
-                }`}
-              >
-                {item.label}
-              </NavLink>
-            );
-          })}
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </div>
 
         {/* Right side */}

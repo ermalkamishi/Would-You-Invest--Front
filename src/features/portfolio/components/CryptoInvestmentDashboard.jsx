@@ -26,6 +26,7 @@ import { fetchPitches, investInPitch } from '../../pitches/pitchesApi';
 import { fetchUserBets } from '../../pitches/betsApi';
 import { setHighlightPitchId } from '../../pitches/pitchesSlice';
 import InvestModal from '../../wallet/components/InvestModal';
+const EMPTY_PORTFOLIO = [];
 
 export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
   const dispatch = useDispatch();
@@ -66,7 +67,7 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
       .catch(console.error);
   }, [user?.id, isAuthenticated, isFounder, dispatch]);
 
-  const rawPortfolio = user?.portfolio || [];
+  const rawPortfolio = user?.portfolio || EMPTY_PORTFOLIO;
 
   // Merge portfolio holdings with live pitches data (live prices & total raised)
   const enrichedHoldings = useMemo(() => {

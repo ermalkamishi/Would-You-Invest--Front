@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setHighlightPitchId } from '../../features/pitches/pitchesSlice';
 import { addNotification } from '../../features/notifications/notificationsSlice';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { calculateROI } from '../../utils/calculateROI';
+
+const EMPTY_PORTFOLIO = [];
 
 // ── GENERATE REAL ALERTS FROM PITCHES & USER HOLDINGS ─────────────────────────
 function generateRealAlerts(pitches, userPortfolio = []) {
@@ -221,7 +223,7 @@ function TickerTape({ alerts }) {
   const content = alerts.map((a) => `${a.emoji}  ${a.msg}`).join('     •     ');
 
   return (
-    <div className="w-full bg-[hsl(240,12%,5%)] border-b border-white/5 overflow-hidden h-7 flex items-center relative">
+    <div className="shrink-0 w-full bg-[hsl(240,12%,5%)] border-b border-white/5 overflow-hidden h-7 flex items-center relative">
       <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-[hsl(240,12%,5%)] to-transparent z-10 pointer-events-none" />
       <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-[hsl(240,12%,5%)] to-transparent z-10 pointer-events-none" />
       <div
@@ -240,32 +242,41 @@ export default function LiveAlertSystem() {
   const navigate = useNavigate();
   const pitches = useSelector((s) => s.pitches.feed);
   const user = useSelector((s) => s.auth.user);
-  const userPortfolio = user?.portfolio || [];
+  const userPortfolio = user?.portfolio || EMPTY_PORTFOLIO;
 
-  const [tickerAlerts, setTickerAlerts] = useState([]);
   const [toasts, setToasts] = useState([]);
-  const intervalRef = useRef(null);
 
-  // Sync tickerAlerts based on pitches changes
-  useEffect(() => {
-    if (pitches && pitches.length > 0) {
-      const realAlerts = generateRealAlerts(pitches, userPortfolio);
-      let displayAlerts = [...realAlerts];
-      while (displayAlerts.length < 5 && displayAlerts.length > 0) {
-        displayAlerts = [...displayAlerts, ...realAlerts];
-      }
-      setTickerAlerts(displayAlerts);
-    } else {
-      setTickerAlerts([]);
+  // Compute tickerAlerts purely using useMemo (no setState loop)
+  const tickerAlerts = useMemo(() => {
+    if (!pitches || pitches.length === 0) return EMPTY_PORTFOLIO;
+    const realAlerts = generateRealAlerts(pitches, userPortfolio);
+    let displayAlerts = [...realAlerts];
+    while (displayAlerts.length < 5 && displayAlerts.length > 0) {
+      displayAlerts = [...displayAlerts, ...realAlerts];
     }
+    return displayAlerts;
   }, [pitches, userPortfolio]);
+
+  // Keep latest references for periodic toasts without causing re-triggers
+  const pitchesRef = useRef(pitches);
+  const userPortfolioRef = useRef(userPortfolio);
+  useEffect(() => {
+    pitchesRef.current = pitches;
+    userPortfolioRef.current = userPortfolio;
+  }, [pitches, userPortfolio]);
+
+  const hasPitches = (pitches?.length || 0) > 0;
 
   // Generate periodic toasts of real activity and portfolio alerts
   useEffect(() => {
-    if (!pitches || pitches.length === 0) return;
+    if (!hasPitches) return;
 
     const triggerToast = () => {
-      const allAlerts = generateRealAlerts(pitches, userPortfolio);
+      const currentPitches = pitchesRef.current;
+      const currentPortfolio = userPortfolioRef.current;
+      if (!currentPitches || currentPitches.length === 0) return;
+
+      const allAlerts = generateRealAlerts(currentPitches, currentPortfolio);
       if (allAlerts.length === 0) return;
 
       // Prioritize portfolio alerts 70% of the time if user has any holdings
@@ -288,13 +299,13 @@ export default function LiveAlertSystem() {
     const timeoutOnMount = setTimeout(triggerToast, 3500);
 
     // Periodic toasts every 20 seconds
-    intervalRef.current = setInterval(triggerToast, 20000);
+    const interval = setInterval(triggerToast, 20000);
 
     return () => {
       clearTimeout(timeoutOnMount);
-      clearInterval(intervalRef.current);
+      clearInterval(interval);
     };
-  }, [pitches, userPortfolio, dispatch]);
+  }, [hasPitches, dispatch]);
 
   const dismissToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));

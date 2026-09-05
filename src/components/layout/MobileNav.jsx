@@ -17,18 +17,20 @@ export default function MobileNav() {
   });
 
   return (
-    <nav className="sticky bottom-0 z-50 glass border-t border-white/5 md:hidden">
+    <nav className="sticky bottom-0 z-50 shrink-0 glass border-t border-white/5 md:hidden pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-around">
         {visibleNav.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.to;
           return (
             <NavLink
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
-                isActive ? 'text-[#00FF66]' : 'text-white/30 hover:text-white/50'
-              }`}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-0.5 text-[10px] font-medium transition-colors ${
+                  isActive ? 'text-[#00FF66]' : 'text-white/30 hover:text-white/50'
+                }`
+              }
             >
               <Icon className="w-5 h-5" />
               {item.label}

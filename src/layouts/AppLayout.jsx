@@ -24,7 +24,7 @@ export default function AppLayout() {
   }, [location]);
 
   return (
-    <div className={`flex flex-col ${isFeed ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`flex flex-col w-full ${isFeed ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none select-none' : 'min-h-screen'}`}>
       <Header onLoginClick={() => dispatch(openLoginModal())} />
       <LiveAlertSystem />
 

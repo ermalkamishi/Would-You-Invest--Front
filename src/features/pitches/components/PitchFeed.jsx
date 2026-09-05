@@ -157,15 +157,19 @@ export default function PitchFeed() {
 
   return (
     <>
-      <div ref={scrollContainerRef} className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar scroll-smooth">
+      <div
+        ref={scrollContainerRef}
+        className="h-full w-full overflow-y-scroll snap-y snap-mandatory overscroll-contain touch-pan-y no-scrollbar scroll-smooth"
+        style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}
+      >
         {pitches.map((startup) => (
           <div
             key={startup.id}
             ref={(el) => { cardRefs.current[startup.id] = el; }}
             data-pitch-id={startup.id}
-            className="h-full w-full snap-start snap-always flex items-center justify-center py-1.5 px-2 sm:py-3 sm:px-4"
+            className="h-full w-full snap-start snap-always flex items-center justify-center py-1.5 px-2 sm:py-3 sm:px-4 shrink-0 min-h-0"
           >
-            <div className="w-full max-w-[760px] h-full">
+            <div className="w-full max-w-[760px] h-full flex flex-col min-h-0">
               <PitchCard
                 startup={startup}
                 isActive={startup.id === activePitchId}

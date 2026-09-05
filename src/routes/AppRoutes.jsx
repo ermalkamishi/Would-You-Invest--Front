@@ -18,16 +18,16 @@ export default function AppRoutes() {
       <ScrollToTop />
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<FeedPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/create" element={<CreatePitchPage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/about" element={<AboutPage />} />
+          <Route index element={<FeedPage />} />
+          <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="create" element={<CreatePitchPage />} />
+          <Route path="portfolio" element={<PortfolioPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="terms" element={<TermsPage />} />
+          <Route path="privacy" element={<PrivacyPage />} />
+          <Route path="about" element={<AboutPage />} />
           <Route element={<AdminRoute />}>
-            <Route path="/admin" element={<AdminPanelDashboard />} />
+            <Route path="admin" element={<AdminPanelDashboard />} />
           </Route>
         </Route>
       </Routes>

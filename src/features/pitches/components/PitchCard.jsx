@@ -374,14 +374,14 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
 
       {/* Chart area — hidden when comments are open */}
       {!showComments && (
-        <div className="relative mx-3.5 sm:mx-5 flex-1 min-h-[140px] sm:min-h-[220px] rounded-xl bg-black/60 border border-white/5 p-2 sm:p-3 flex flex-col justify-center mb-2 sm:mb-4 overflow-hidden">
+        <div className="relative mx-3.5 sm:mx-5 flex-1 min-h-[120px] sm:min-h-[220px] rounded-xl bg-black/60 border border-white/5 p-2 sm:p-3 flex flex-col justify-center mb-2 sm:mb-4 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-tr from-[#00FF66]/5 to-transparent pointer-events-none" />
           {chartLoading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader2 className="w-5 h-5 text-[#00FF66] animate-spin" />
             </div>
           ) : (
-            <div className="w-full h-full min-h-[120px] sm:min-h-[200px]">
+            <div className="w-full h-full min-h-[100px] sm:min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: -5 }}>
                   <defs>

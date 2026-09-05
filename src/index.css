@@ -64,6 +64,20 @@
   }
 }
 
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -72,7 +86,7 @@ body {
     linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 40px 40px;
-  min-height: 100vh;
+  min-height: 100%;
   animation: moveGrid 4s linear infinite;
 }
 
