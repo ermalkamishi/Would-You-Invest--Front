@@ -315,7 +315,7 @@ export default function LiveAlertSystem() {
     dismissToast(id);
     if (alert.pitchId) {
       dispatch(setHighlightPitchId(alert.pitchId));
-      navigate('/');
+      navigate(`/?pitch=${alert.pitchId}`);
     } else if (alert.isPortfolioAlert) {
       navigate('/portfolio');
     }

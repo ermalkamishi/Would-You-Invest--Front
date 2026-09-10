@@ -54,6 +54,25 @@ export async function investInPitch(startupId, amount, userId, token) {
 }
 
 /**
+ * Cash out / divest shares from a pitch.
+ */
+export async function divestFromPitch(startupId, shares, token) {
+  const res = await fetch(`${API_BASE}/startups/${startupId}/divest`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ shares }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || 'Failed to cash out investment');
+  }
+  return res.json();
+}
+
+/**
  * Submit a pass reason for a pitch.
  */
 export async function submitPassReason(startupId, reason, token) {

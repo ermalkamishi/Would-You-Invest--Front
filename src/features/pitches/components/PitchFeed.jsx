@@ -1,9 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import { setPitches, setLoading, setHighlightPitchId, clearHighlightPitchId } from '../pitchesSlice';
-import { fetchPitches, investInPitch, submitPassReason } from '../pitchesApi';
+import { fetchPitches, fetchPitchById, investInPitch, divestFromPitch, submitPassReason } from '../pitchesApi';
+import { fetchUserPortfolio, fetchUserProfile } from '../../auth/authApi';
+import { setPortfolio } from '../../auth/authSlice';
+import { setBalance } from '../../wallet/walletSlice';
 import PitchCard from './PitchCard';
 import InvestModal from '../../wallet/components/InvestModal';
+import DivestModal from '../../wallet/components/DivestModal';
 import PassMenu from './PassMenu';
 import { Loader2, Presentation } from 'lucide-react';
 
@@ -15,7 +20,12 @@ export default function PitchFeed() {
   const { feed, isLoading, highlightPitchId } = useSelector((s) => s.pitches);
   const { token, user } = useSelector((s) => s.auth);
 
+  const [searchParams] = useSearchParams();
+  const urlPitchId = searchParams.get('pitch');
+  const targetPitchId = urlPitchId || highlightPitchId;
+
   const [investTarget, setInvestTarget] = useState(null);
+  const [divestTarget, setDivestTarget] = useState(null);
   const [passTarget, setPassTarget] = useState(null);
   const [activePitchId, setActivePitchId] = useState(null);
   // Map of pitchId -> DOM ref for each card row
@@ -70,16 +80,40 @@ export default function PitchFeed() {
     };
   }, [feed]);
 
-  // When highlightPitchId is set (e.g. user clicked a live alert),
-  // scroll the matching pitch card into view and then clear the highlight.
+  // If a specific pitch is requested that is not in the default feed, fetch it
   useEffect(() => {
-    if (!highlightPitchId) return;
-    const el = cardRefs.current[highlightPitchId];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (targetPitchId && feed.length > 0 && !feed.some((p) => p.id === targetPitchId)) {
+      if (isRealPitch(targetPitchId)) {
+        fetchPitchById(targetPitchId)
+          .then((single) => {
+            if (single?.id) {
+              dispatch(setPitches([single, ...feed]));
+            }
+          })
+          .catch(console.error);
+      }
+    }
+  }, [targetPitchId, feed, dispatch]);
+
+  // Order pitches so the targeted idea is immediately at index 0 (top of viewport)
+  const orderedPitches = useMemo(() => {
+    if (!targetPitchId || !feed || feed.length === 0) return feed;
+    const target = feed.find((p) => p.id === targetPitchId);
+    if (!target) return feed;
+    const others = feed.filter((p) => p.id !== targetPitchId);
+    return [target, ...others];
+  }, [feed, targetPitchId]);
+
+  // When targeted idea changes or mounts, snap directly to it
+  useEffect(() => {
+    if (targetPitchId && orderedPitches.length > 0) {
+      setActivePitchId(targetPitchId);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
       dispatch(clearHighlightPitchId());
     }
-  }, [highlightPitchId, dispatch, feed]);
+  }, [targetPitchId, orderedPitches, dispatch]);
 
   const handleInvest = async (startupId, amount) => {
     const updateList = (list) => list.map((p) => {
@@ -99,12 +133,59 @@ export default function PitchFeed() {
       try {
         const updated = await investInPitch(startupId, amount, user?.id, token);
         dispatch(setPitches(feed.map((p) => p.id === startupId ? { ...p, ...updated } : p)));
+        if (user?.id) {
+          const [port, profile] = await Promise.all([
+            fetchUserPortfolio(user.id),
+            fetchUserProfile(user.id),
+          ]);
+          dispatch(setPortfolio(port));
+          if (profile?.walletBalance !== undefined) {
+            dispatch(setBalance(Number(profile.walletBalance)));
+          }
+        }
       } catch {
         // Fallback: update optimistically
         dispatch(setPitches(updateList(feed)));
       }
     } else {
       // Demo pitch — update state locally (no backend call needed)
+      dispatch(setPitches(updateList(feed)));
+    }
+  };
+
+  const handleDivest = async (startupId, shares, returnAmount) => {
+    const updateList = (list) => list.map((p) => {
+      if (p.id !== startupId) return p;
+      const nextRaised = Math.max(0, Number(p.totalRaised) - returnAmount);
+      const k = 0.0015;
+      const newPrice = parseFloat(Math.max(0.01, k * Math.sqrt(nextRaised)).toFixed(4));
+      return {
+        ...p,
+        totalRaised: nextRaised,
+        currentPrice: newPrice,
+      };
+    });
+
+    if (isRealPitch(startupId)) {
+      try {
+        const res = await divestFromPitch(startupId, shares, token);
+        if (res?.startup) {
+          dispatch(setPitches(feed.map((p) => p.id === startupId ? { ...p, ...res.startup } : p)));
+        }
+        if (user?.id) {
+          const [port, profile] = await Promise.all([
+            fetchUserPortfolio(user.id),
+            fetchUserProfile(user.id),
+          ]);
+          dispatch(setPortfolio(port));
+          if (profile?.walletBalance !== undefined) {
+            dispatch(setBalance(Number(profile.walletBalance)));
+          }
+        }
+      } catch {
+        dispatch(setPitches(updateList(feed)));
+      }
+    } else {
       dispatch(setPitches(updateList(feed)));
     }
   };
@@ -119,9 +200,9 @@ export default function PitchFeed() {
 
     // Automatically scroll to the next pitch
     if (passedId) {
-      const idx = feed.findIndex((p) => p.id === passedId);
-      if (idx !== -1 && idx < feed.length - 1) {
-        const nextPitch = feed[idx + 1];
+      const idx = orderedPitches.findIndex((p) => p.id === passedId);
+      if (idx !== -1 && idx < orderedPitches.length - 1) {
+        const nextPitch = orderedPitches[idx + 1];
         const nextEl = cardRefs.current[nextPitch.id];
         if (nextEl) {
           nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -130,7 +211,7 @@ export default function PitchFeed() {
     }
   };
 
-  const pitches = feed;
+  const pitches = orderedPitches;
 
   if (isLoading) {
     return (
@@ -174,6 +255,7 @@ export default function PitchFeed() {
                 startup={startup}
                 isActive={startup.id === activePitchId}
                 onInvest={(s) => setInvestTarget(s)}
+                onDivest={(s, holding) => setDivestTarget({ ...holding, ...s, sharesBought: holding.sharesBought || holding.shares })}
                 onPass={(s) => setPassTarget(s)}
               />
             </div>
@@ -186,6 +268,13 @@ export default function PitchFeed() {
         onClose={() => setInvestTarget(null)}
         startup={investTarget}
         onInvest={handleInvest}
+      />
+
+      <DivestModal
+        isOpen={!!divestTarget}
+        onClose={() => setDivestTarget(null)}
+        holding={divestTarget}
+        onDivest={handleDivest}
       />
 
       <PassMenu

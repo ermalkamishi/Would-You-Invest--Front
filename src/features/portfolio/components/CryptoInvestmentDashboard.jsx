@@ -10,6 +10,7 @@ import {
   DollarSign,
   PieChart,
   ArrowUpRight,
+  ArrowDownRight,
   PlusCircle,
   Sparkles,
   Zap,
@@ -20,12 +21,14 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { calculateROI, isPositiveROI } from '../../../utils/calculateROI';
-import { fetchUserPortfolio } from '../../auth/authApi';
+import { fetchUserPortfolio, fetchUserProfile } from '../../auth/authApi';
 import { setPortfolio, openLoginModal } from '../../auth/authSlice';
-import { fetchPitches, investInPitch } from '../../pitches/pitchesApi';
+import { fetchPitches, investInPitch, divestFromPitch } from '../../pitches/pitchesApi';
 import { fetchUserBets } from '../../pitches/betsApi';
 import { setHighlightPitchId } from '../../pitches/pitchesSlice';
+import { setBalance } from '../../wallet/walletSlice';
 import InvestModal from '../../wallet/components/InvestModal';
+import DivestModal from '../../wallet/components/DivestModal';
 const EMPTY_PORTFOLIO = [];
 
 export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
@@ -43,6 +46,8 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [investModalStartup, setInvestModalStartup] = useState(null);
+  const [divestModalHolding, setDivestModalHolding] = useState(null);
+  const [portfolio, setPortfolioState] = useState(user?.portfolio || []);
 
   // Sync user portfolio & live pitches
   useEffect(() => {
@@ -50,7 +55,12 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
 
     if (user?.id) {
       fetchUserPortfolio(user.id)
-        .then((port) => dispatch(setPortfolio(port)))
+        .then((port) => {
+          if (Array.isArray(port)) {
+            setPortfolioState(port);
+            dispatch(setPortfolio(port));
+          }
+        })
         .catch(console.error);
 
       fetchUserBets(user.id)
@@ -67,7 +77,13 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
       .catch(console.error);
   }, [user?.id, isAuthenticated, isFounder, dispatch]);
 
-  const rawPortfolio = user?.portfolio || EMPTY_PORTFOLIO;
+  useEffect(() => {
+    if (user?.portfolio && Array.isArray(user.portfolio)) {
+      setPortfolioState(user.portfolio);
+    }
+  }, [user?.portfolio]);
+
+  const rawPortfolio = portfolio.length > 0 ? portfolio : (user?.portfolio || EMPTY_PORTFOLIO);
 
   // Merge portfolio holdings with live pitches data (live prices & total raised)
   const enrichedHoldings = useMemo(() => {
@@ -153,19 +169,37 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
     if (token) {
       await investInPitch(startupId, amount, user?.id, token);
       if (user?.id) {
-        const port = await fetchUserPortfolio(user.id);
+        const [port, profile] = await Promise.all([
+          fetchUserPortfolio(user.id),
+          fetchUserProfile(user.id),
+        ]);
         dispatch(setPortfolio(port));
+        if (profile?.walletBalance !== undefined) {
+          dispatch(setBalance(Number(profile.walletBalance)));
+        }
+      }
+    }
+  };
+
+  const handleModalDivest = async (startupId, shares, returnAmount) => {
+    if (token) {
+      await divestFromPitch(startupId, shares, token);
+      if (user?.id) {
+        const [port, profile] = await Promise.all([
+          fetchUserPortfolio(user.id),
+          fetchUserProfile(user.id),
+        ]);
+        dispatch(setPortfolio(port));
+        if (profile?.walletBalance !== undefined) {
+          dispatch(setBalance(Number(profile.walletBalance)));
+        }
       }
     }
   };
 
   const handleViewPitch = (pitchId) => {
     dispatch(setHighlightPitchId(pitchId));
-    if (onSwitchToFeed) {
-      onSwitchToFeed();
-    } else {
-      navigate('/');
-    }
+    navigate(`/?pitch=${pitchId}`);
   };
 
   if (!isAuthenticated) {
@@ -503,11 +537,20 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleInvestMore(holding)}
-                          className="px-3 py-1.5 rounded-lg bg-[#00FF66]/15 hover:bg-[#00FF66] text-[#00FF66] hover:text-black font-bold text-xs border border-[#00FF66]/30 transition-all flex items-center gap-1 shadow-sm"
+                          className="px-2.5 py-1.5 rounded-lg bg-[#00FF66]/15 hover:bg-[#00FF66] text-[#00FF66] hover:text-black font-bold text-xs border border-[#00FF66]/30 transition-all flex items-center gap-1 shadow-sm"
                           title="Buy more shares"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline">Buy</span>
+                        </button>
+
+                        <button
+                          onClick={() => setDivestModalHolding(holding)}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-400 text-amber-400 hover:text-black font-bold text-xs border border-amber-500/30 transition-all flex items-center gap-1 shadow-sm"
+                          title="Cash out / sell shares"
+                        >
+                          <ArrowDownRight className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Cash Out</span>
                         </button>
 
                         <button
@@ -678,6 +721,16 @@ export default function CryptoInvestmentDashboard({ onSwitchToFeed }) {
           onClose={() => setInvestModalStartup(null)}
           startup={investModalStartup}
           onInvest={handleModalInvest}
+        />
+      )}
+
+      {/* Divest Modal for Taking Money Back */}
+      {divestModalHolding && (
+        <DivestModal
+          isOpen={!!divestModalHolding}
+          onClose={() => setDivestModalHolding(null)}
+          holding={divestModalHolding}
+          onDivest={handleModalDivest}
         />
       )}
     </div>

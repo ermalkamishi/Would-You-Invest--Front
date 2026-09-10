@@ -18,12 +18,16 @@ const authSlice = createSlice({
       state.error = null;
     },
     loginSuccess(state, action) {
-      state.user = action.payload.user;
+      const existingPortfolio = state.user?.portfolio || [];
+      state.user = {
+        ...action.payload.user,
+        portfolio: action.payload.user?.portfolio || existingPortfolio,
+      };
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.isLoading = false;
       state.error = null;
-      if (action.payload.isNew && action.payload.user.role === 'investor') {
+      if (action.payload.isNew && action.payload.user?.role === 'investor') {
         state.showWelcomeBonus = true;
       }
     },
@@ -49,6 +53,26 @@ const authSlice = createSlice({
         state.user.portfolio.push(action.payload);
       }
     },
+    divestFromPortfolio(state, action) {
+      // action.payload = { id, sharesSold, returnAmount }
+      if (!state.user || !state.user.portfolio) return;
+      const existing = state.user.portfolio.find(h => h.id === action.payload.id);
+      if (existing) {
+        const totalShares = Number(existing.sharesBought || 0);
+        const sharesSold = Number(action.payload.sharesSold || 0);
+        if (sharesSold >= totalShares - 0.001) {
+          // Liquidated entirely
+          state.user.portfolio = state.user.portfolio.filter(h => h.id !== action.payload.id);
+        } else {
+          const fraction = totalShares > 0 ? (sharesSold / totalShares) : 1;
+          existing.sharesBought = parseFloat((totalShares - sharesSold).toFixed(4));
+          existing.amountInvested = parseFloat(Math.max(0, existing.amountInvested * (1 - fraction)).toFixed(2));
+        }
+      }
+      if (action.payload.returnAmount && state.user.walletBalance !== undefined) {
+        state.user.walletBalance = parseFloat((Number(state.user.walletBalance) + Number(action.payload.returnAmount)).toFixed(2));
+      }
+    },
     openLoginModal(state) {
       state.showLoginModal = true;
     },
@@ -66,7 +90,12 @@ const authSlice = createSlice({
     },
     updateProfileSuccess(state, action) {
       if (state.user) {
-        state.user = { ...state.user, ...action.payload };
+        const existingPortfolio = state.user.portfolio || [];
+        state.user = {
+          ...state.user,
+          ...action.payload,
+          portfolio: action.payload.portfolio || existingPortfolio,
+        };
       }
     },
     claimStipendSuccess(state, action) {
@@ -77,11 +106,11 @@ const authSlice = createSlice({
     },
     setPortfolio(state, action) {
       if (state.user) {
-        state.user.portfolio = action.payload;
+        state.user.portfolio = action.payload || [];
       }
     },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, openLoginModal, closeLoginModal, addToPortfolio, closeWelcomeBonus, updateAvatar, updateProfileSuccess, claimStipendSuccess, setPortfolio } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, openLoginModal, closeLoginModal, addToPortfolio, divestFromPortfolio, closeWelcomeBonus, updateAvatar, updateProfileSuccess, claimStipendSuccess, setPortfolio } = authSlice.actions;
 export default authSlice.reducer;

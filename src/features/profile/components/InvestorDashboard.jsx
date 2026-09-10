@@ -80,7 +80,7 @@ export default function InvestorDashboard() {
       // Sync profile & portfolio
       fetchUserProfile(user.id)
         .then((profile) => {
-          dispatch(loginSuccess({ user: profile, token }));
+          dispatch(updateProfileSuccess(profile));
           dispatch(setBalance(Number(profile.walletBalance)));
         })
         .catch(console.error);

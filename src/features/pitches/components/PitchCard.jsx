@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Users, TrendingUp, MessageSquare, Flag, Send, ThumbsUp, Share2, Loader2 } from 'lucide-react';
+import { Users, TrendingUp, MessageSquare, Flag, Send, ThumbsUp, Share2, Loader2, DollarSign, ArrowDownRight } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { useTickerPrice } from '../../../hooks/useTickerPrice';
 import { addComment, upvoteComment } from '../pitchesSlice';
@@ -52,7 +52,7 @@ const generateMockHistory = (startup) => {
   return points;
 };
 
-export default function PitchCard({ startup, isActive, onInvest, onPass }) {
+export default function PitchCard({ startup, isActive, onInvest, onDivest, onPass }) {
   const dispatch = useDispatch();
   const user = useSelector((s) => s.auth.user);
   const token = useSelector((s) => s.auth.token);
@@ -556,6 +556,49 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
         </button>
       </div>
 
+      {/* Active Holding Position Bar */}
+      {(() => {
+        const userHolding = user?.portfolio?.find((h) => h.id === startup.id);
+        const ownedShares = Number(userHolding?.sharesBought || userHolding?.shares || 0);
+        if (!userHolding || ownedShares <= 0) return null;
+
+        const livePrice = Number(startup.currentPrice || userHolding?.currentPrice || 0.01);
+        const userEntryPrice = Number(userHolding?.entryPrice || livePrice);
+        const currentValuation = ownedShares * livePrice;
+        const userInvested = Number(userHolding?.amountInvested || ownedShares * userEntryPrice);
+        const userPnL = currentValuation - userInvested;
+        const userPnLPercent = userInvested > 0 ? ((userPnL / userInvested) * 100).toFixed(1) : '0.0';
+        const isUserProfit = userPnL >= 0;
+
+        return (
+          <div className="mx-3.5 sm:mx-5 mb-2 sm:mb-2.5 p-2 sm:p-2.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/30 flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-lg bg-[#00FF66]/20 border border-[#00FF66]/40 flex items-center justify-center shrink-0">
+                <DollarSign className="w-3.5 h-3.5 text-[#00FF66]" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-[#00FF66]">Your Position</span>
+                  <span className="text-[9px] text-white/40">•</span>
+                  <span className="text-[10px] font-mono text-white/80 font-bold">{ownedShares.toLocaleString()} shs</span>
+                </div>
+                <p className="text-[11px] font-mono text-white font-extrabold truncate">
+                  {formatCurrency(Math.round(currentValuation))}
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className={`text-[11px] font-mono font-black flex items-center justify-end gap-0.5 ${
+                isUserProfit ? 'text-[#00FF66]' : 'text-[#FF3366]'
+              }`}>
+                {isUserProfit ? '+' : ''}{formatCurrency(Math.round(userPnL))} ({isUserProfit ? '+' : ''}{userPnLPercent}%)
+              </span>
+              <p className="text-[9px] text-white/40 font-mono">PnL</p>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Action buttons */}
       <div className="p-3.5 sm:p-5 pt-0 flex gap-2">
         <button
@@ -570,6 +613,23 @@ export default function PitchCard({ startup, isActive, onInvest, onPass }) {
         >
           Invest
         </button>
+        {(() => {
+          const userHolding = user?.portfolio?.find((h) => h.id === startup.id);
+          const ownedShares = Number(userHolding?.sharesBought || userHolding?.shares || 0);
+          if (userHolding && ownedShares > 0 && onDivest) {
+            return (
+              <button
+                onClick={() => onDivest(startup, userHolding)}
+                className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-400 text-amber-400 hover:text-black border border-amber-500/30 text-xs sm:text-sm font-extrabold transition-all shadow-sm flex items-center gap-1 shrink-0"
+                title="Cash out money from this idea"
+              >
+                <ArrowDownRight className="w-4 h-4" />
+                <span>Cash Out</span>
+              </button>
+            );
+          }
+          return null;
+        })()}
         <button
           onClick={() => {
             const entryPrice = Number(startup.currentPrice)?.toFixed(4) || '0.0100';

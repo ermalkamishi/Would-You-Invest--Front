@@ -13,6 +13,9 @@ const walletSlice = createSlice({
       state.balance -= action.payload;
       state.totalInvested += action.payload;
     },
+    addToWallet(state, action) {
+      state.balance += action.payload;
+    },
     claimDailyStipend(state) {
       if (!state.dailyStipendClaimed) {
         state.balance += state.stipendAmount;
@@ -25,5 +28,5 @@ const walletSlice = createSlice({
   },
 });
 
-export const { deductFromWallet, claimDailyStipend, setBalance } = walletSlice.actions;
+export const { deductFromWallet, addToWallet, claimDailyStipend, setBalance } = walletSlice.actions;
 export default walletSlice.reducer;
