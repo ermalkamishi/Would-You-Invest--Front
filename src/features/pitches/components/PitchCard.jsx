@@ -608,10 +608,16 @@ export default function PitchCard({ startup, isActive, onInvest, onDivest, onPas
           Pass
         </button>
         <button
-          onClick={() => onInvest(startup)}
-          className="flex-1 py-2 sm:py-2.5 rounded-xl bg-[#00FF66] text-black text-xs sm:text-sm font-bold hover:bg-[#00FF66]/80 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)]"
+          onClick={() => {
+            if (!user) {
+              dispatch(openLoginModal());
+              return;
+            }
+            onInvest(startup);
+          }}
+          className="flex-1 py-2 sm:py-2.5 rounded-xl bg-[#00FF66] text-black text-xs sm:text-sm font-bold hover:bg-[#00FF66]/80 transition-all shadow-[0_0_15px_rgba(0,255,102,0.3)] flex items-center justify-center gap-1.5"
         >
-          Invest
+          {user ? 'Invest' : 'Sign In to Invest'}
         </button>
         {(() => {
           const userHolding = user?.portfolio?.find((h) => h.id === startup.id);

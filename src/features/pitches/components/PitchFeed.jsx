@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { setPitches, setLoading, setHighlightPitchId, clearHighlightPitchId } from '../pitchesSlice';
 import { fetchPitches, fetchPitchById, investInPitch, divestFromPitch, submitPassReason } from '../pitchesApi';
 import { fetchUserPortfolio, fetchUserProfile } from '../../auth/authApi';
-import { setPortfolio } from '../../auth/authSlice';
+import { setPortfolio, openLoginModal } from '../../auth/authSlice';
 import { setBalance } from '../../wallet/walletSlice';
 import PitchCard from './PitchCard';
 import InvestModal from '../../wallet/components/InvestModal';
@@ -116,6 +116,11 @@ export default function PitchFeed() {
   }, [targetPitchId, orderedPitches, dispatch]);
 
   const handleInvest = async (startupId, amount) => {
+    if (!user || !token) {
+      dispatch(openLoginModal());
+      return;
+    }
+
     const updateList = (list) => list.map((p) => {
       if (p.id !== startupId) return p;
       const oldPrice = Number(p.currentPrice);
@@ -254,7 +259,13 @@ export default function PitchFeed() {
               <PitchCard
                 startup={startup}
                 isActive={startup.id === activePitchId}
-                onInvest={(s) => setInvestTarget(s)}
+                onInvest={(s) => {
+                  if (!user) {
+                    dispatch(openLoginModal());
+                    return;
+                  }
+                  setInvestTarget(s);
+                }}
                 onDivest={(s, holding) => setDivestTarget({ ...holding, ...s, sharesBought: holding.sharesBought || holding.shares })}
                 onPass={(s) => setPassTarget(s)}
               />

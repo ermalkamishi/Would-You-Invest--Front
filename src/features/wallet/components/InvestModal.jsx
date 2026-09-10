@@ -1,19 +1,53 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { deductFromWallet } from '../walletSlice';
-import { addToPortfolio } from '../../auth/authSlice';
-import { X, TrendingUp, AlertTriangle } from 'lucide-react';
+import { addToPortfolio, openLoginModal } from '../../auth/authSlice';
+import { X, TrendingUp, AlertTriangle, Lock } from 'lucide-react';
 import { formatCurrency } from '../../../utils/formatCurrency';
 
 const QUICK_AMOUNTS = [100, 500, 1000, 5000];
 
 export default function InvestModal({ isOpen, onClose, startup, onInvest }) {
   const dispatch = useDispatch();
+  const user = useSelector((s) => s.auth.user);
   const balance = useSelector((s) => s.wallet.balance);
   const [amount, setAmount] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen || !startup) return null;
+
+  if (!user) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative w-full max-w-sm mx-4 mb-4 sm:mb-0 rounded-2xl border border-white/10 bg-[hsl(240,10%,6%)] p-6 shadow-2xl text-center">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#00FF66] to-transparent opacity-60 rounded-t-2xl" />
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="w-12 h-12 rounded-2xl bg-[#00FF66]/10 border border-[#00FF66]/20 flex items-center justify-center mx-auto mb-4 text-[#00FF66]">
+            <Lock className="w-6 h-6" />
+          </div>
+
+          <h3 className="text-lg font-bold text-white mb-2">Sign In Required</h3>
+          <p className="text-sm text-white/60 mb-6 leading-relaxed">
+            You must be signed in to invest virtual capital in ideas, back founders, and track your portfolio.
+          </p>
+
+          <button
+            onClick={() => {
+              onClose();
+              dispatch(openLoginModal());
+            }}
+            className="w-full py-3 rounded-xl bg-[#00FF66] text-black font-extrabold text-sm hover:bg-[#00FF66]/80 transition-all shadow-[0_0_20px_rgba(0,255,102,0.3)]"
+          >
+            Sign In / Register
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const maxAllowed = Number(balance || 0);
   const sharePrice = Number(startup.currentPrice);

@@ -21,6 +21,7 @@ import { addComment } from '../pitchesSlice';
 import { addCommentToPitch } from '../pitchesApi';
 import { fetchUserBets, placeBet } from '../betsApi';
 import { deductFromWallet } from '../../wallet/walletSlice';
+import { openLoginModal } from '../../auth/authSlice';
 
 const isRealPitch = (id) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -118,7 +119,11 @@ export default function LearnMoreModal({
   };
 
   const handlePlaceBet = async () => {
-    if (!user?.id || isPlacingBet || betAmount <= 0) return;
+    if (!user?.id) {
+      dispatch(openLoginModal());
+      return;
+    }
+    if (isPlacingBet || betAmount <= 0) return;
     if (betAmount > walletBalance) {
       setBetError('Insufficient wallet balance');
       return;
@@ -517,10 +522,10 @@ export default function LearnMoreModal({
                   <button
                     type="button"
                     onClick={handlePlaceBet}
-                    disabled={isPlacingBet || betAmount <= 0}
+                    disabled={user && (isPlacingBet || betAmount <= 0)}
                     className="w-full py-2.5 bg-[#00FF66] hover:bg-[#00FF66]/80 text-black font-extrabold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 shadow-[0_0_15px_rgba(0,255,102,0.2)]"
                   >
-                    {isPlacingBet ? 'Placing Prediction...' : 'Place Prediction ($2x Payout)'}
+                    {!user ? 'Sign In to Predict' : isPlacingBet ? 'Placing Prediction...' : 'Place Prediction ($2x Payout)'}
                   </button>
                 </div>
               );
@@ -619,7 +624,13 @@ export default function LearnMoreModal({
                   </button>
                 </>
               ) : (
-                <p className="text-xs text-white/30 text-center w-full py-1.5">Sign in to leave a comment</p>
+                <button
+                  type="button"
+                  onClick={() => dispatch(openLoginModal())}
+                  className="text-xs text-white/50 hover:text-[#00FF66] text-center w-full py-1.5 transition-colors underline underline-offset-4 decoration-white/20"
+                >
+                  Sign in to leave a comment
+                </button>
               )}
             </form>
           </div>
@@ -639,13 +650,17 @@ export default function LearnMoreModal({
           </button>
           <button
             onClick={() => {
+              if (!user) {
+                dispatch(openLoginModal());
+                return;
+              }
               onInvest(startup);
               onClose();
             }}
             className="w-2/3 py-3 rounded-xl bg-[#00FF66] text-black text-xs sm:text-sm font-black hover:bg-[#00FF66]/80 transition-all shadow-[0_0_20px_rgba(0,255,102,0.3)] flex items-center justify-center gap-1.5"
           >
             <TrendingUp className="w-4 h-4" />
-            Invest in Pitch
+            {user ? 'Invest in Pitch' : 'Sign In to Invest'}
           </button>
         </div>
 

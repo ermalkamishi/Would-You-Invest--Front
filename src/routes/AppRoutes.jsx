@@ -20,6 +20,7 @@ export default function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<FeedPage />} />
           <Route path="leaderboard" element={<LeaderboardPage />} />
+          <Route path="board" element={<LeaderboardPage />} />
           <Route path="create" element={<CreatePitchPage />} />
           <Route path="portfolio" element={<PortfolioPage />} />
           <Route path="profile" element={<ProfilePage />} />
